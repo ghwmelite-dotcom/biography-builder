@@ -89,6 +89,22 @@ export default function BackCoverPage({ data, theme }) {
               {data.designerCredit}
             </Text>
           )}
+
+          {data.memorialQrCode && (
+            <View style={{ alignItems: 'center', marginTop: 15 }}>
+              <Image
+                src={data.memorialQrCode}
+                style={{ width: 60, height: 60 }}
+              />
+              <Text style={{
+                fontFamily: 'Cormorant', fontSize: 6,
+                color: theme.subtleText, textAlign: 'center',
+                marginTop: 4, letterSpacing: 0.5,
+              }}>
+                Scan for Online Memorial
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </Page>

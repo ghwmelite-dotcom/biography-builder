@@ -69,6 +69,8 @@ export const defaultTributes = [
     openingVerse: '"Her children arise and call her blessed."\n— Proverbs 31:28',
     body: 'Mama, you were our first teacher, our fiercest protector, and our greatest cheerleader. From our earliest memories, you shaped every good thing in us with your love, discipline, and unwavering faith.\n\nYou taught us the value of integrity through your decades of dedicated service, where you earned the respect and admiration of all who knew you. Your kitchen was always warm, your door always open, and your heart always full of love.\n\nWe are who we are because of you, Mama. The lessons you taught us, the prayers you whispered over us, and the countless sacrifices you made will forever be the foundation of our lives.\n\nRest well, our beloved mother. Until we meet again at the feet of Jesus.',
     closingLine: 'Rest in Perfect Peace, Mama',
+    photos: [null, null, null],
+    photoCaptions: ['', '', ''],
   },
   {
     id: 'trib-grandchildren',
@@ -77,6 +79,8 @@ export const defaultTributes = [
     openingVerse: '"Grandchildren are the crown of the aged."\n— Proverbs 17:6',
     body: 'Grandma, you were the warmest embrace, the sweetest smile, and the wisest voice in our lives. Your stories painted vivid pictures of a world we could only imagine — of community, of faith, and of love.\n\nYou had a way of making every grandchild feel like the most special person in the world. Your faith was not just something you spoke about — it was something you lived and breathed in everything you did.\n\nWe will carry your legacy in our hearts always — your grace, your faith, your kindness, and your boundless love.\n\nRest in perfect peace, Grandma. We love you beyond words.',
     closingLine: 'Forever in Our Hearts',
+    photos: [null, null, null],
+    photoCaptions: ['', '', ''],
   },
   {
     id: 'trib-family',
@@ -85,6 +89,8 @@ export const defaultTributes = [
     openingVerse: '"A woman who fears the Lord is to be praised."\n— Proverbs 31:30',
     body: 'She was the embodiment of what it means to be family. Rooted in rich traditions, she carried within her the warmth, wisdom, and strength of generations.\n\nWhether it was hosting family gatherings with lavish hospitality, mediating family matters with grace and wisdom, or simply being present with a listening ear, she was always there. Her home was a sanctuary for all.\n\nThe family has lost a great matriarch, but her spirit lives on in every lesson she taught, every life she touched, and every heart she warmed.',
     closingLine: 'Damirifa Due — Rest Well',
+    photos: [null, null, null],
+    photoCaptions: ['', '', ''],
   },
   {
     id: 'trib-friends',
@@ -93,6 +99,8 @@ export const defaultTributes = [
     openingVerse: '"A friend loves at all times."\n— Proverbs 17:17',
     body: 'To know her was to know what true friendship meant. She had a rare and beautiful gift for making everyone feel valued, seen, and heard.\n\nThrough the decades, she remained constant — loyal, caring, and always ready with wise counsel. Her generosity knew no bounds, and she gave freely without expectation.\n\nWe will miss her laughter, her wisdom, and the quiet strength she brought to every gathering. Farewell, dear friend.',
     closingLine: 'Until We Meet Again',
+    photos: [null, null, null],
+    photoCaptions: ['', '', ''],
   },
   {
     id: 'trib-colleagues',
@@ -101,6 +109,8 @@ export const defaultTributes = [
     openingVerse: '"Well done, good and faithful servant."\n— Matthew 25:21',
     body: 'She was more than a colleague — she was the heartbeat of our workplace. From her very first day, she set a standard of excellence that inspired all who had the privilege of working alongside her.\n\nHer dedication to duty was unmatched. She approached every task with meticulous attention to detail and unwavering commitment. Even after retirement, she remained a beloved member of our family.\n\nWe have lost a shining star from our midst. May she rest in eternal peace.',
     closingLine: 'Rest in Eternal Peace',
+    photos: [null, null, null],
+    photoCaptions: ['', '', ''],
   },
 ]
 
@@ -165,4 +175,6 @@ export const defaultData = {
   backCoverPhrase: 'DAMIRIFA DUE!',
   backCoverSubtext: 'Rest in Perfect Peace',
   designerCredit: '',
+  memorialId: null,
+  memorialQrCode: null,
 }

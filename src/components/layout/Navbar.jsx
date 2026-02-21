@@ -85,7 +85,7 @@ export default function Navbar() {
       <nav className="h-12 bg-background border-b border-border flex items-center justify-between px-4 shrink-0" role="navigation" aria-label="Main navigation">
         <Link to="/" className="flex items-center gap-2 text-card-foreground hover:text-foreground transition-colors" aria-label="Go to home page">
           <BookOpen size={18} className="text-primary" />
-          <span className="text-sm font-semibold tracking-wide">Brochure Builder</span>
+          <span className="text-sm font-semibold tracking-wide">FuneralPress</span>
         </Link>
 
         {isEditor && (

@@ -1,4 +1,4 @@
-import { Page, View, Text } from '@react-pdf/renderer'
+import { Page, View, Text, Image } from '@react-pdf/renderer'
 import { PageBorders, OrnamentalDivider, CrossSymbol, LineDivider, PageNumber } from './decorations'
 import { createStyles } from './styles'
 
@@ -61,6 +61,29 @@ export default function TributePages({ tribute, theme, startPageNum }) {
               }}>
                 {tribute.closingLine}
               </Text>
+            )}
+
+            {/* Tribute photos */}
+            {tribute.photos && tribute.photos.some(Boolean) && (
+              <View style={{
+                flexDirection: 'row', justifyContent: 'center',
+                marginTop: 12,
+              }}>
+                {tribute.photos.map((photo, i) =>
+                  photo ? (
+                    <View key={i} style={{ alignItems: 'center', marginHorizontal: 5 }}>
+                      <Image src={photo} style={{
+                        width: 120, height: 90, objectFit: 'cover',
+                        objectPosition: 'center top',
+                        borderWidth: 1, borderColor: theme.border, borderRadius: 3,
+                      }} />
+                      {tribute.photoCaptions && tribute.photoCaptions[i] && (
+                        <Text style={s.photoCaption}>{tribute.photoCaptions[i]}</Text>
+                      )}
+                    </View>
+                  ) : null
+                )}
+              </View>
             )}
           </>
         )}

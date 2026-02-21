@@ -1,5 +1,5 @@
 {
-  "name": "funeral-brochure-builder",
+  "name": "funeralpress",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -10,6 +10,7 @@
     "deploy": "vite build && wrangler pages deploy dist"
   },
   "dependencies": {
+    "@imgly/background-removal": "^1.7.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",
@@ -20,9 +21,13 @@
     "@react-pdf/renderer": "^4.3.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "html-to-image": "^1.11.13",
     "lucide-react": "^0.575.0",
+    "pdfjs-dist": "^5.4.624",
+    "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-pageflip": "^2.0.3",
     "react-router-dom": "^7.13.0",
     "tailwind-merge": "^3.5.0",
     "zustand": "^5.0.11"

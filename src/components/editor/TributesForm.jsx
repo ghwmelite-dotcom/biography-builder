@@ -6,6 +6,7 @@ import { tributeWritingGuides } from '../../utils/writingPrompts'
 import WordCountIndicator from './WordCountIndicator'
 import WritingPromptsDialog from './WritingPromptsDialog'
 import AIWriterDialog from './AIWriterDialog'
+import ImageUploader from './ImageUploader'
 
 export default function TributesForm() {
   const store = useBrochureStore()
@@ -180,6 +181,31 @@ export default function TributesForm() {
                   onChange={(e) => store.updateTribute(i, 'closingLine', e.target.value)}
                   className="w-full bg-card border border-input rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                 />
+              </div>
+
+              {/* Tribute photos */}
+              <div>
+                <label className="block text-xs text-muted-foreground mb-2">Photos (optional, up to 3)</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {[0, 1, 2].map((j) => (
+                    <div key={j}>
+                      <ImageUploader
+                        value={(tribute.photos || [])[j]}
+                        onChange={(v) => store.updateTributePhoto(i, j, v)}
+                        label={`Photo ${j + 1}`}
+                        aspectRatio="4/3"
+                        recommendedText="Recommended: 800x600px landscape"
+                      />
+                      <input
+                        type="text"
+                        value={(tribute.photoCaptions || [])[j] || ''}
+                        onChange={(e) => store.updateTributeCaption(i, j, e.target.value)}
+                        placeholder="Caption..."
+                        className="w-full mt-1 bg-card border border-input rounded px-2 py-1 text-[11px] text-card-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}

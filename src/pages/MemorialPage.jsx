@@ -218,7 +218,7 @@ export default function MemorialPage() {
           <p className="text-xs" style={{ color: theme.subtleText }}>
             Created with{' '}
             <Link to="/" className="hover:underline" style={{ color: theme.heading }}>
-              Funeral Brochure Builder
+              FuneralPress
             </Link>
           </p>
         </div>

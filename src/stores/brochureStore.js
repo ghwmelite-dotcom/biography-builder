@@ -163,6 +163,26 @@ export const useBrochureStore = create((set, get) => ({
     set({ tributes, isDirty: true, editCountSinceLastSave: state.editCountSinceLastSave + 1 })
   },
 
+  updateTributePhoto: (tributeIndex, photoIndex, src) => {
+    const state = get()
+    state._pushHistory()
+    const tributes = [...state.tributes]
+    const photos = [...(tributes[tributeIndex].photos || [null, null, null])]
+    photos[photoIndex] = src
+    tributes[tributeIndex] = { ...tributes[tributeIndex], photos }
+    set({ tributes, isDirty: true })
+  },
+
+  updateTributeCaption: (tributeIndex, captionIndex, caption) => {
+    const state = get()
+    state._pushHistory()
+    const tributes = [...state.tributes]
+    const photoCaptions = [...(tributes[tributeIndex].photoCaptions || ['', '', ''])]
+    photoCaptions[captionIndex] = caption
+    tributes[tributeIndex] = { ...tributes[tributeIndex], photoCaptions }
+    set({ tributes, isDirty: true })
+  },
+
   addTribute: () => {
     const state = get()
     state._pushHistory()
@@ -176,6 +196,8 @@ export const useBrochureStore = create((set, get) => ({
           openingVerse: '',
           body: '',
           closingLine: 'Rest in Perfect Peace',
+          photos: [null, null, null],
+          photoCaptions: ['', '', ''],
         },
       ],
       isDirty: true,
@@ -421,7 +443,7 @@ function extractData(state) {
     editCountSinceLastSave, lastAutoSaveAt, snapshots,
     _pushHistory, updateField, updateNested, updateServiceItem,
     addServiceItem, removeServiceItem, moveServiceItem,
-    updateTribute, addTribute, removeTribute,
+    updateTribute, updateTributePhoto, updateTributeCaption, addTribute, removeTribute,
     updateOfficial, addOfficial, removeOfficial,
     updateGalleryPhoto, addGalleryPhoto, removeGalleryPhoto,
     updateBiographyPhoto, updateBiographyCaption,

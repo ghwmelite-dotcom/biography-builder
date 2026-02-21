@@ -149,7 +149,7 @@ export default function LandingPage() {
           <div className="flex-1 text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-full mb-6">
               <BookOpen size={14} className="text-primary" />
-              <span className="text-xs text-primary tracking-wide">Funeral Brochure Builder</span>
+              <span className="text-xs text-primary tracking-wide">FuneralPress</span>
             </div>
 
             <h1

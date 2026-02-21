@@ -61,7 +61,7 @@ export default function BrochureDocument({ data }) {
   return (
     <Document
       title={`${data.title || ''} ${data.fullName || 'Memorial'} - Funeral Brochure`}
-      author="Funeral Brochure Builder"
+      author="FuneralPress"
     >
       <CoverPage data={data} theme={theme} />
       <ScripturePage data={data} theme={theme} />
