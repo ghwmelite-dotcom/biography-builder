@@ -21,11 +21,13 @@ import {
   Share2,
   Globe,
   BookOpenCheck,
+  Shield,
 } from 'lucide-react'
 import { Sun, Moon } from 'lucide-react'
 import { useBrochureStore } from '../stores/brochureStore'
 import { useThemeStore } from '../stores/themeStore'
 import { usePosterStore } from '../stores/posterStore'
+import { posterTemplates } from '../utils/posterDefaultData'
 import { themes } from '../utils/themes'
 import BrochureMockup from '../components/landing/BrochureMockup'
 import PosterMockup from '../components/landing/PosterMockup'
@@ -116,6 +118,13 @@ export default function LandingPage() {
 
   const handleNewPoster = () => {
     posterStore.newPoster()
+    navigate('/poster-editor')
+  }
+
+  const handlePosterTemplate = (key) => {
+    const template = posterTemplates[key]
+    if (!template) return
+    posterStore.loadTemplate(template.data)
     navigate('/poster-editor')
   }
 
@@ -275,6 +284,47 @@ export default function LandingPage() {
                     {tmpl.title}
                   </h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">{tmpl.desc}</p>
+                  <span className="inline-flex items-center gap-1 mt-3 text-[10px] text-primary/70 group-hover:text-primary transition-colors uppercase tracking-wider font-medium">
+                    Use Template <ArrowRight size={10} />
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Poster Templates */}
+        <div className="mb-20">
+          <div className="text-center mb-8">
+            <p className="text-xs text-primary/80 uppercase tracking-wider mb-2 font-medium">Obituary Posters</p>
+            <h2
+              className="text-2xl md:text-3xl font-bold text-foreground"
+              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+            >
+              Poster Templates
+            </h2>
+            <p className="text-muted-foreground text-sm mt-2 max-w-lg mx-auto">
+              Choose a poster style and fill in the details.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            {Object.entries(posterTemplates).map(([key, tpl]) => {
+              const iconMap = { BookOpen, Heart, Shield, Church }
+              const Icon = iconMap[tpl.icon] || BookOpen
+              return (
+                <button
+                  key={key}
+                  onClick={() => handlePosterTemplate(key)}
+                  className="group flex flex-col items-center text-center p-6 bg-card border border-border rounded-xl hover:border-primary/40 hover:bg-card/80 transition-all duration-200"
+                >
+                  <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                    <Icon size={22} className="text-primary" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
+                    {tpl.name}
+                  </h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{tpl.description}</p>
                   <span className="inline-flex items-center gap-1 mt-3 text-[10px] text-primary/70 group-hover:text-primary transition-colors uppercase tracking-wider font-medium">
                     Use Template <ArrowRight size={10} />
                   </span>
