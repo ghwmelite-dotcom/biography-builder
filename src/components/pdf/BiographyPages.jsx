@@ -52,6 +52,7 @@ export default function BiographyPages({ data, theme, startPageNum }) {
                   <View key={i} style={{ alignItems: 'center', marginHorizontal: 5 }}>
                     <Image src={photo} style={{
                       width: 120, height: 90, objectFit: 'cover',
+                      objectPosition: 'center top',
                       borderWidth: 1, borderColor: theme.border, borderRadius: 3,
                     }} />
                     {data.biographyPhotoCaptions[i] && (
