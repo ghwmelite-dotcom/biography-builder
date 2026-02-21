@@ -45,11 +45,11 @@ export default function BiographyPages({ data, theme, startPageNum }) {
           {idx === 0 && data.biographyPhotos && data.biographyPhotos.some(Boolean) && (
             <View style={{
               flexDirection: 'row', justifyContent: 'center',
-              marginTop: 12, gap: 10,
+              marginTop: 12,
             }}>
               {data.biographyPhotos.map((photo, i) =>
                 photo ? (
-                  <View key={i} style={{ alignItems: 'center' }}>
+                  <View key={i} style={{ alignItems: 'center', marginHorizontal: 5 }}>
                     <Image src={photo} style={{
                       width: 120, height: 90, objectFit: 'cover',
                       borderWidth: 1, borderColor: theme.border, borderRadius: 3,

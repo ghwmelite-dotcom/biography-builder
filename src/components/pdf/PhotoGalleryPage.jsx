@@ -40,11 +40,11 @@ export default function PhotoGalleryPages({ data, theme, startPageNum }) {
         {/* Photo grid - 2 columns */}
         <View style={{
           flex: 1, flexDirection: 'row', flexWrap: 'wrap',
-          justifyContent: 'center', gap: 14, paddingTop: 10,
+          justifyContent: 'center', paddingTop: 10,
           paddingHorizontal: 10,
         }}>
           {pg.photos.map((photo, i) => (
-            <View key={i} style={{ width: '45%', alignItems: 'center', marginBottom: 8 }}>
+            <View key={i} style={{ width: '45%', alignItems: 'center', marginBottom: 8, marginHorizontal: 7 }}>
               <View style={{
                 width: '100%', height: 160,
                 borderWidth: 1.5, borderColor: theme.border, borderRadius: 4,

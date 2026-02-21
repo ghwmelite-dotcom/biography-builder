@@ -89,10 +89,10 @@ export function TripleDot({ theme, style: extraStyle }) {
   return (
     <View style={[{
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      gap: 8, marginVertical: 6,
+      marginVertical: 6,
     }, extraStyle]}>
-      <Text style={{ fontSize: 8, color: theme.border }}>◆</Text>
-      <Text style={{ fontSize: 10, color: theme.border }}>❖</Text>
+      <Text style={{ fontSize: 8, color: theme.border, marginRight: 8 }}>◆</Text>
+      <Text style={{ fontSize: 10, color: theme.border, marginRight: 8 }}>❖</Text>
       <Text style={{ fontSize: 8, color: theme.border }}>◆</Text>
     </View>
   )
