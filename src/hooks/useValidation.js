@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow'
 import { useBrochureStore } from '../stores/brochureStore'
 import { isSectionComplete, getSectionCompletionCount, validateField } from '../utils/validation'
 
@@ -6,7 +7,7 @@ export function useSectionComplete(key) {
 }
 
 export function useOverallProgress() {
-  return useBrochureStore((state) => getSectionCompletionCount(state))
+  return useBrochureStore(useShallow((state) => getSectionCompletionCount(state)))
 }
 
 export function useFieldValidation(fieldName) {

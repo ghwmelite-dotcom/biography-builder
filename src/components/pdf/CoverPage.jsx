@@ -27,7 +27,7 @@ export default function CoverPage({ data, theme }) {
             {data.coverPhoto ? (
               <Image src={data.coverPhoto} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
             ) : (
-              <View style={[s.photoPlaceholder, { width: '100%', height: '100%', borderWidth: 0, borderRadius: 0 }]}>
+              <View style={[s.photoPlaceholder, { width: '100%', height: '100%', borderWidth: 0.01, borderRadius: 0.01 }]}>
                 <CrossSymbol theme={theme} size={30} />
                 <Text style={{ fontFamily: 'Cormorant', fontStyle: 'italic', fontSize: 9, color: theme.subtleText, marginTop: 6 }}>
                   [ Portrait Photo ]

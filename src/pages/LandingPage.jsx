@@ -19,8 +19,10 @@ import {
   Cross,
 } from 'lucide-react'
 import { useBrochureStore } from '../stores/brochureStore'
+import { usePosterStore } from '../stores/posterStore'
 import { themes } from '../utils/themes'
 import BrochureMockup from '../components/landing/BrochureMockup'
+import PosterMockup from '../components/landing/PosterMockup'
 import ExampleBrochureDialog from '../components/landing/ExampleBrochureDialog'
 import ThemePreviewCard from '../components/landing/ThemePreviewCard'
 
@@ -60,6 +62,8 @@ export default function LandingPage() {
   const navigate = useNavigate()
   const store = useBrochureStore()
   const brochures = store.brochuresList
+  const posterStore = usePosterStore()
+  const posters = posterStore.postersList
   const [exampleOpen, setExampleOpen] = useState(false)
 
   const handleNew = () => {
@@ -88,6 +92,23 @@ export default function LandingPage() {
   const handleTemplateSelect = () => {
     store.newBrochure()
     navigate('/editor')
+  }
+
+  const handleNewPoster = () => {
+    posterStore.newPoster()
+    navigate('/poster-editor')
+  }
+
+  const handleLoadPoster = (id) => {
+    posterStore.loadPoster(id)
+    navigate('/poster-editor')
+  }
+
+  const handleDeletePoster = (e, id) => {
+    e.stopPropagation()
+    if (confirm('Delete this poster?')) {
+      posterStore.deletePoster(id)
+    }
   }
 
   return (
@@ -138,6 +159,59 @@ export default function LandingPage() {
             <div className="rounded-xl overflow-hidden shadow-2xl shadow-amber-900/10 ring-1 ring-zinc-800">
               <BrochureMockup themeKey="blackGold" className="text-[10px]" />
             </div>
+          </div>
+        </div>
+
+        {/* Choose Your Product */}
+        <div className="mb-20">
+          <div className="text-center mb-8">
+            <p className="text-xs text-amber-500/80 uppercase tracking-wider mb-2 font-medium">Two Beautiful Products</p>
+            <h2
+              className="text-2xl md:text-3xl font-bold text-white"
+              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+            >
+              What Would You Like to Create?
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Brochure Card */}
+            <button
+              onClick={handleNew}
+              className="group text-left p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-amber-600/40 transition-all"
+            >
+              <div className="w-full max-w-[160px] mx-auto mb-4 rounded-lg overflow-hidden shadow-lg ring-1 ring-zinc-800">
+                <BrochureMockup themeKey="blackGold" className="text-[8px]" />
+              </div>
+              <h3 className="text-lg font-semibold text-zinc-200 mb-1 group-hover:text-amber-400 transition-colors" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+                Funeral Brochure
+              </h3>
+              <p className="text-xs text-zinc-500 leading-relaxed mb-3">
+                Multi-page A4 brochure with cover, order of service, tributes, biography, photo gallery, and acknowledgements.
+              </p>
+              <span className="inline-flex items-center gap-1 text-[10px] text-amber-500/70 group-hover:text-amber-400 transition-colors uppercase tracking-wider font-medium">
+                Create Brochure <ArrowRight size={10} />
+              </span>
+            </button>
+
+            {/* Poster Card */}
+            <button
+              onClick={handleNewPoster}
+              className="group text-left p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-amber-600/40 transition-all"
+            >
+              <div className="w-full max-w-[160px] mx-auto mb-4 rounded-lg overflow-hidden shadow-lg ring-1 ring-zinc-800">
+                <PosterMockup themeKey="royalBlue" className="text-[8px]" />
+              </div>
+              <h3 className="text-lg font-semibold text-zinc-200 mb-1 group-hover:text-amber-400 transition-colors" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+                Obituary Poster
+              </h3>
+              <p className="text-xs text-zinc-500 leading-relaxed mb-3">
+                Single-page A3 poster with photo, family announcement, funeral arrangements, and family details.
+              </p>
+              <span className="inline-flex items-center gap-1 text-[10px] text-amber-500/70 group-hover:text-amber-400 transition-colors uppercase tracking-wider font-medium">
+                Create Poster <ArrowRight size={10} />
+              </span>
+            </button>
           </div>
         </div>
 
@@ -206,6 +280,43 @@ export default function LandingPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={(e) => handleDelete(e, b.id)}
+                      className="p-2 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <ArrowRight size={16} className="text-zinc-600 group-hover:text-amber-500 transition-colors" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Saved Posters */}
+        {posters.length > 0 && (
+          <div className="mb-20">
+            <h2 className="text-sm text-zinc-400 uppercase tracking-wider mb-4 font-medium">
+              Saved Posters
+            </h2>
+            <div className="space-y-2">
+              {posters.map((p) => (
+                <div
+                  key={p.id}
+                  onClick={() => handleLoadPoster(p.id)}
+                  className="flex items-center justify-between p-4 bg-zinc-900 border border-zinc-800 rounded-lg cursor-pointer hover:border-zinc-700 hover:bg-zinc-900/80 transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <FileText size={18} className="text-amber-500/60" />
+                    <div>
+                      <p className="text-sm text-zinc-300">{p.name || 'Untitled Poster'}</p>
+                      <p className="text-[10px] text-zinc-600">
+                        Last saved: {new Date(p.updatedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => handleDeletePoster(e, p.id)}
                       className="p-2 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
                     >
                       <Trash2 size={14} />

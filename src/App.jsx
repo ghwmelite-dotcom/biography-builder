@@ -7,6 +7,7 @@ import { Skeleton } from './components/ui/skeleton'
 
 const EditorPage = lazy(() => import('./pages/EditorPage'))
 const PreviewPage = lazy(() => import('./pages/PreviewPage'))
+const PosterEditorPage = lazy(() => import('./pages/PosterEditorPage'))
 
 function LoadingFallback() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/editor" element={<EditorPage />} />
               <Route path="/preview" element={<PreviewPage />} />
+              <Route path="/poster-editor" element={<PosterEditorPage />} />
             </Routes>
           </Suspense>
         </BrowserRouter>

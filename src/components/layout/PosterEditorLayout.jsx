@@ -1,76 +1,80 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer'
 import { Download, ChevronDown, ChevronRight, Check, Eye } from 'lucide-react'
-import { useBrochureStore } from '../../stores/brochureStore'
-import { useAutoSave } from '../../hooks/useAutoSave'
-import { useSectionComplete, useOverallProgress } from '../../hooks/useValidation'
+import { usePosterStore } from '../../stores/posterStore'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
-import { BackupReminder } from '../ui/backup-reminder'
 import { Skeleton } from '../ui/skeleton'
 import { Dialog, DialogContent } from '../ui/dialog'
-import BrochureDocument from '../pdf/BrochureDocument'
+import PosterDocument from '../poster-pdf/PosterDocument'
 
-import BasicInfoForm from '../editor/BasicInfoForm'
-import CoverForm from '../editor/CoverForm'
-import ScriptureForm from '../editor/ScriptureForm'
-import OfficialsForm from '../editor/OfficialsForm'
-import OrderOfServiceForm from '../editor/OrderOfServiceForm'
-import BiographyForm from '../editor/BiographyForm'
-import TributesForm from '../editor/TributesForm'
-import PhotoGalleryForm from '../editor/PhotoGalleryForm'
-import AcknowledgementsForm from '../editor/AcknowledgementsForm'
-import BackCoverForm from '../editor/BackCoverForm'
+import PosterBasicForm from '../poster-editor/PosterBasicForm'
+import PosterAnnouncementForm from '../poster-editor/PosterAnnouncementForm'
+import PosterFuneralForm from '../poster-editor/PosterFuneralForm'
+import PosterFamilyForm from '../poster-editor/PosterFamilyForm'
+import PosterExtendedForm from '../poster-editor/PosterExtendedForm'
+import PosterFooterForm from '../poster-editor/PosterFooterForm'
 
 const sections = [
-  { key: 'basic', title: 'Basic Information', icon: '1', component: BasicInfoForm },
-  { key: 'cover', title: 'Cover Page', icon: '2', component: CoverForm },
-  { key: 'scripture', title: 'Scripture Page', icon: '3', component: ScriptureForm },
-  { key: 'officials', title: 'Programme Officials', icon: '4', component: OfficialsForm },
-  { key: 'service', title: 'Order of Service', icon: '5', component: OrderOfServiceForm },
-  { key: 'biography', title: 'Biography', icon: '6', component: BiographyForm },
-  { key: 'tributes', title: 'Tributes', icon: '7', component: TributesForm },
-  { key: 'gallery', title: 'Photo Gallery', icon: '8', component: PhotoGalleryForm },
-  { key: 'ack', title: 'Acknowledgements', icon: '9', component: AcknowledgementsForm },
-  { key: 'back', title: 'Back Cover', icon: '10', component: BackCoverForm },
+  { key: 'basic', title: 'Basic Information', icon: '1', component: PosterBasicForm },
+  { key: 'announcement', title: 'Announcement', icon: '2', component: PosterAnnouncementForm },
+  { key: 'funeral', title: 'Funeral Arrangements', icon: '3', component: PosterFuneralForm },
+  { key: 'family', title: 'Immediate Family', icon: '4', component: PosterFamilyForm },
+  { key: 'extended', title: 'Extended Family', icon: '5', component: PosterExtendedForm },
+  { key: 'footer', title: 'Footer & Theme', icon: '6', component: PosterFooterForm },
 ]
 
 function extractPdfData() {
-  const state = useBrochureStore.getState()
+  const state = usePosterStore.getState()
   return {
-    title: state.title,
+    posterTheme: state.posterTheme,
+    headerTitle: state.headerTitle,
     fullName: state.fullName,
-    dateOfBirth: state.dateOfBirth,
+    alias: state.alias,
+    age: state.age,
+    photo: state.photo,
     dateOfDeath: state.dateOfDeath,
-    funeralDate: state.funeralDate,
-    funeralTime: state.funeralTime,
-    funeralVenue: state.funeralVenue,
-    burialLocation: state.burialLocation,
-    theme: state.theme,
-    coverPhoto: state.coverPhoto,
-    coverVerse: state.coverVerse,
-    coverSubtitle: state.coverSubtitle,
-    scriptureKey: state.scriptureKey,
-    customScripture: state.customScripture,
-    additionalVerse: state.additionalVerse,
-    officials: state.officials,
-    orderOfService: state.orderOfService,
-    biography: state.biography,
-    biographyPhotos: state.biographyPhotos,
-    biographyPhotoCaptions: state.biographyPhotoCaptions,
-    tributes: state.tributes,
-    galleryPhotos: state.galleryPhotos,
-    acknowledgements: state.acknowledgements,
-    familySignature: state.familySignature,
-    backCoverVerse: state.backCoverVerse,
-    backCoverPhrase: state.backCoverPhrase,
-    backCoverSubtext: state.backCoverSubtext,
-    designerCredit: state.designerCredit,
+    placeOfDeath: state.placeOfDeath,
+    announcementText: state.announcementText,
+    funeralArrangements: state.funeralArrangements,
+    father: state.father,
+    mother: state.mother,
+    widowWidower: state.widowWidower,
+    widowWidowerLabel: state.widowWidowerLabel,
+    children: state.children,
+    grandchildren: state.grandchildren,
+    siblings: state.siblings,
+    inLaw: state.inLaw,
+    brothersSisters: state.brothersSisters,
+    cousins: state.cousins,
+    nephewsNieces: state.nephewsNieces,
+    chiefMourners: state.chiefMourners,
+    invitationText: state.invitationText,
+    dressCode: state.dressCode,
   }
 }
 
-// Small component that uses the hook per-section to avoid re-rendering the whole list
+function checkSectionComplete(key, state) {
+  switch (key) {
+    case 'basic':
+      return !!state.fullName?.trim()
+    case 'announcement':
+      return !!state.announcementText?.trim()
+    case 'funeral':
+      return state.funeralArrangements?.some(a => a.value?.trim())
+    case 'family':
+      return !!(state.father?.trim() || state.mother?.trim() || state.widowWidower?.trim() || state.children?.trim() || state.grandchildren?.trim() || state.siblings?.trim() || state.inLaw?.trim())
+    case 'extended':
+      return !!(state.brothersSisters?.trim() || state.cousins?.trim() || state.nephewsNieces?.trim() || state.chiefMourners?.trim())
+    case 'footer':
+      return !!state.invitationText?.trim()
+    default:
+      return false
+  }
+}
+
 function SectionBadge({ sectionKey, icon }) {
-  const isComplete = useSectionComplete(sectionKey)
+  const state = usePosterStore()
+  const isComplete = checkSectionComplete(sectionKey, state)
 
   if (isComplete) {
     return (
@@ -88,7 +92,12 @@ function SectionBadge({ sectionKey, icon }) {
 }
 
 function ProgressBar() {
-  const { completed, total } = useOverallProgress()
+  const state = usePosterStore()
+  const total = sections.length
+  let completed = 0
+  for (const s of sections) {
+    if (checkSectionComplete(s.key, state)) completed++
+  }
   const pct = (completed / total) * 100
 
   return (
@@ -110,6 +119,22 @@ function ProgressBar() {
   )
 }
 
+function PosterBackupReminder() {
+  const editCount = usePosterStore(s => s.editCountSinceLastSave)
+  const savePoster = usePosterStore(s => s.savePoster)
+  const [dismissed, setDismissed] = useState(false)
+
+  if (dismissed || editCount < 5) return null
+
+  return (
+    <div className="mb-3 px-3 py-2 bg-amber-900/30 border border-amber-700/50 rounded-lg flex items-center gap-2 text-xs text-amber-300">
+      <span className="flex-1">You have unsaved changes. Don't forget to save!</span>
+      <button onClick={() => { savePoster(); setDismissed(true) }} className="px-2 py-1 bg-amber-600 text-white rounded text-xs hover:bg-amber-500">Save Now</button>
+      <button onClick={() => setDismissed(true)} className="text-amber-500 hover:text-amber-400 text-sm font-bold">&times;</button>
+    </div>
+  )
+}
+
 function PdfSkeleton() {
   return (
     <div className="flex-1 flex items-center justify-center p-8">
@@ -125,8 +150,37 @@ function PdfSkeleton() {
   )
 }
 
-export default function EditorLayout() {
-  useAutoSave()
+// Auto-save hook for poster store
+function usePosterAutoSave(intervalMs = 30000) {
+  const savePoster = usePosterStore(s => s.savePoster)
+  const timerRef = useRef(null)
+
+  useEffect(() => {
+    if (timerRef.current) clearInterval(timerRef.current)
+
+    timerRef.current = setInterval(() => {
+      if (usePosterStore.getState().isDirty) {
+        savePoster()
+      }
+    }, intervalMs)
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [intervalMs, savePoster])
+
+  // Also save on unmount if dirty
+  useEffect(() => {
+    return () => {
+      if (usePosterStore.getState().isDirty) {
+        savePoster()
+      }
+    }
+  }, [savePoster])
+}
+
+export default function PosterEditorLayout() {
+  usePosterAutoSave()
   const [openSections, setOpenSections] = useState(['basic'])
   const [pdfData, setPdfData] = useState(() => extractPdfData())
   const [pdfReady, setPdfReady] = useState(false)
@@ -142,7 +196,7 @@ export default function EditorLayout() {
 
   // Subscribe to store changes with debounce
   useEffect(() => {
-    const unsub = useBrochureStore.subscribe(() => {
+    const unsub = usePosterStore.subscribe(() => {
       if (timerRef.current) clearTimeout(timerRef.current)
       timerRef.current = setTimeout(() => {
         setPdfData(extractPdfData())
@@ -165,10 +219,10 @@ export default function EditorLayout() {
       {/* Left Panel - Form Editor */}
       <div className="w-full lg:w-[420px] xl:w-[460px] border-r border-zinc-800 overflow-y-auto bg-zinc-950">
         <div className="p-4">
-          <h2 className="text-xs text-zinc-500 uppercase tracking-wider mb-3 font-medium">Brochure Editor</h2>
+          <h2 className="text-xs text-zinc-500 uppercase tracking-wider mb-3 font-medium">Poster Editor</h2>
 
           <ProgressBar />
-          <BackupReminder />
+          <PosterBackupReminder />
 
           <div className="space-y-1">
             {sections.map(({ key, title, icon, component: Component }) => {
@@ -211,8 +265,8 @@ export default function EditorLayout() {
           <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800 bg-zinc-950 shrink-0">
             <span className="text-xs text-zinc-500 uppercase tracking-wider">Live Preview</span>
             <PDFDownloadLink
-              document={<BrochureDocument data={pdfData} />}
-              fileName={`${pdfData.fullName?.replace(/\s+/g, '-') || 'Memorial'}-Funeral-Brochure.pdf`}
+              document={<PosterDocument data={pdfData} />}
+              fileName={`${pdfData.fullName?.replace(/\s+/g, '-') || 'Obituary'}-Poster.pdf`}
             >
               {({ loading }) => (
                 <button
@@ -234,7 +288,7 @@ export default function EditorLayout() {
                   style={{ width: '100%', height: '100%', border: 'none' }}
                   showToolbar={true}
                 >
-                  <BrochureDocument data={pdfData} />
+                  <PosterDocument data={pdfData} />
                 </PDFViewer>
               </div>
             ) : (
@@ -261,8 +315,8 @@ export default function EditorLayout() {
                 <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
                   <span className="text-sm text-zinc-300 font-medium">PDF Preview</span>
                   <PDFDownloadLink
-                    document={<BrochureDocument data={pdfData} />}
-                    fileName={`${pdfData.fullName?.replace(/\s+/g, '-') || 'Memorial'}-Funeral-Brochure.pdf`}
+                    document={<PosterDocument data={pdfData} />}
+                    fileName={`${pdfData.fullName?.replace(/\s+/g, '-') || 'Obituary'}-Poster.pdf`}
                   >
                     {({ loading }) => (
                       <button
@@ -278,7 +332,7 @@ export default function EditorLayout() {
                 <div className="flex-1 relative">
                   <div className="absolute inset-0">
                     <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }}>
-                      <BrochureDocument data={pdfData} />
+                      <PosterDocument data={pdfData} />
                     </PDFViewer>
                   </div>
                 </div>
