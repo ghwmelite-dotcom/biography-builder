@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { useBrochureStore } from '../../stores/brochureStore'
 import ImageUploader from './ImageUploader'
+import ImageCropDialog from './ImageCropDialog'
 
 export default function CoverForm() {
   const store = useBrochureStore()
+  const [cropDialogOpen, setCropDialogOpen] = useState(false)
 
   return (
     <div className="space-y-4">
@@ -13,6 +16,8 @@ export default function CoverForm() {
           onChange={(v) => store.updateField('coverPhoto', v)}
           label="Upload portrait photo"
           aspectRatio="3/4"
+          recommendedText="Recommended: 600x800px portrait"
+          onCropRequest={() => setCropDialogOpen(true)}
         />
       </div>
 
@@ -36,6 +41,17 @@ export default function CoverForm() {
           placeholder="Enter Bible verse for the cover..."
         />
       </div>
+
+      {/* Crop dialog for cover photo */}
+      {store.coverPhoto && (
+        <ImageCropDialog
+          open={cropDialogOpen}
+          onOpenChange={setCropDialogOpen}
+          imageSrc={store.coverPhoto}
+          aspectRatio={3 / 4}
+          onCrop={(croppedDataUrl) => store.updateField('coverPhoto', croppedDataUrl)}
+        />
+      )}
     </div>
   )
 }

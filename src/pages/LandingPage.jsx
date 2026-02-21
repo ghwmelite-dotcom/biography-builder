@@ -1,11 +1,66 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { Plus, BookOpen, Trash2, FileText, ArrowRight } from 'lucide-react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  Plus,
+  BookOpen,
+  Trash2,
+  FileText,
+  ArrowRight,
+  Eye,
+  Palette,
+  Printer,
+  Image,
+  Save,
+  Undo2,
+  Download,
+  Heart,
+  Church,
+  Flower2,
+  Cross,
+} from 'lucide-react'
 import { useBrochureStore } from '../stores/brochureStore'
+import { themes } from '../utils/themes'
+import BrochureMockup from '../components/landing/BrochureMockup'
+import ExampleBrochureDialog from '../components/landing/ExampleBrochureDialog'
+import ThemePreviewCard from '../components/landing/ThemePreviewCard'
+
+const FEATURES = [
+  { icon: Eye, title: 'Live Preview', desc: 'See your brochure update in real-time as you type and edit' },
+  { icon: Palette, title: 'Premium Themes', desc: 'Black & Gold, White & Navy, or Burgundy & Cream' },
+  { icon: Printer, title: 'Print-Ready PDF', desc: 'Download high-quality A4 PDFs ready for professional printing' },
+  { icon: Image, title: 'Drag & Drop Photos', desc: 'Add portrait photos, gallery images, and biography pictures' },
+  { icon: Save, title: 'Auto-Save', desc: 'Your work is automatically saved to the browser as you go' },
+  { icon: Undo2, title: 'Undo / Redo', desc: 'Made a mistake? Step back and forward through your edits' },
+  { icon: Download, title: 'Export & Import', desc: 'Export your brochure as JSON and import it on another device' },
+  { icon: Heart, title: 'Beautiful Tributes', desc: 'Add multiple tribute sections with opening verses and closing lines' },
+]
+
+const TEMPLATES = [
+  {
+    id: 'full-service',
+    icon: Church,
+    title: 'Full Service',
+    desc: 'Complete funeral brochure with order of service, tributes, biography, photo gallery, and acknowledgements.',
+  },
+  {
+    id: 'simple-memorial',
+    icon: Flower2,
+    title: 'Simple Memorial',
+    desc: 'A streamlined brochure with cover, tribute, and back cover — perfect for a smaller ceremony.',
+  },
+  {
+    id: 'graveside-only',
+    icon: Cross,
+    title: 'Graveside Only',
+    desc: 'A minimal brochure designed for graveside services with essential details and a personal touch.',
+  },
+]
 
 export default function LandingPage() {
   const navigate = useNavigate()
   const store = useBrochureStore()
   const brochures = store.brochuresList
+  const [exampleOpen, setExampleOpen] = useState(false)
 
   const handleNew = () => {
     store.newBrochure()
@@ -24,52 +79,111 @@ export default function LandingPage() {
     }
   }
 
+  const handleThemeSelect = (themeKey) => {
+    store.newBrochure()
+    store.updateField('theme', themeKey)
+    navigate('/editor')
+  }
+
+  const handleTemplateSelect = () => {
+    store.newBrochure()
+    navigate('/editor')
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-200">
       {/* Hero */}
-      <div className="max-w-4xl mx-auto px-6 pt-20 pb-16">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-600/10 border border-amber-600/20 rounded-full mb-6">
-            <BookOpen size={14} className="text-amber-500" />
-            <span className="text-xs text-amber-400 tracking-wide">Funeral Brochure Builder</span>
+      <div className="max-w-5xl mx-auto px-6 pt-20 pb-16">
+        <div className="flex flex-col lg:flex-row items-center gap-12 mb-20">
+          {/* Left: text content */}
+          <div className="flex-1 text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-600/10 border border-amber-600/20 rounded-full mb-6">
+              <BookOpen size={14} className="text-amber-500" />
+              <span className="text-xs text-amber-400 tracking-wide">Funeral Brochure Builder</span>
+            </div>
+
+            <h1
+              className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight"
+              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+            >
+              Create Beautiful<br />
+              <span className="text-amber-500">Memorial Brochures</span>
+            </h1>
+
+            <p className="text-zinc-400 text-lg max-w-2xl mb-8 leading-relaxed">
+              Design premium funeral brochures with our elegant editor. Choose from professional themes,
+              add tributes, photos, and order of service — then download as a print-ready PDF.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3 justify-center lg:justify-start">
+              <button
+                onClick={handleNew}
+                className="inline-flex items-center gap-2 px-8 py-3 bg-amber-600 hover:bg-amber-500 text-white font-medium rounded-lg transition-colors text-sm"
+              >
+                <Plus size={18} />
+                Create New Brochure
+              </button>
+              <button
+                onClick={() => setExampleOpen(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 font-medium rounded-lg transition-colors text-sm"
+              >
+                <Eye size={18} />
+                See Example
+              </button>
+            </div>
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-            Create Beautiful<br />
-            <span className="text-amber-500">Memorial Brochures</span>
-          </h1>
-
-          <p className="text-zinc-400 text-lg max-w-2xl mx-auto mb-8 leading-relaxed">
-            Design premium funeral brochures with our elegant editor. Choose from professional themes,
-            add tributes, photos, and order of service — then download as a print-ready PDF.
-          </p>
-
-          <button
-            onClick={handleNew}
-            className="inline-flex items-center gap-2 px-8 py-3 bg-amber-600 hover:bg-amber-500 text-white font-medium rounded-lg transition-colors text-sm"
-          >
-            <Plus size={18} />
-            Create New Brochure
-          </button>
+          {/* Right: hero brochure mockup */}
+          <div className="flex-shrink-0 w-full max-w-[280px] lg:max-w-[300px]">
+            <div className="rounded-xl overflow-hidden shadow-2xl shadow-amber-900/10 ring-1 ring-zinc-800">
+              <BrochureMockup themeKey="blackGold" className="text-[10px]" />
+            </div>
+          </div>
         </div>
 
-        {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-16">
-          {[
-            { title: 'Live Preview', desc: 'See your brochure update in real-time as you type' },
-            { title: 'Premium Themes', desc: 'Black & Gold, White & Navy, or Burgundy & Cream' },
-            { title: 'Print-Ready PDF', desc: 'Download high-quality A4 PDFs ready for professional printing' },
-          ].map((f, i) => (
-            <div key={i} className="p-5 bg-zinc-900 border border-zinc-800 rounded-xl">
-              <h3 className="text-sm font-semibold text-zinc-200 mb-1">{f.title}</h3>
-              <p className="text-xs text-zinc-500 leading-relaxed">{f.desc}</p>
-            </div>
-          ))}
+        {/* Template Selection */}
+        <div className="mb-20">
+          <div className="text-center mb-8">
+            <p className="text-xs text-amber-500/80 uppercase tracking-wider mb-2 font-medium">Get Started Quickly</p>
+            <h2
+              className="text-2xl md:text-3xl font-bold text-white"
+              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+            >
+              Choose a Template
+            </h2>
+            <p className="text-zinc-500 text-sm mt-2 max-w-lg mx-auto">
+              Pick a starting point and customize every detail in the editor.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {TEMPLATES.map((tmpl) => {
+              const Icon = tmpl.icon
+              return (
+                <button
+                  key={tmpl.id}
+                  onClick={handleTemplateSelect}
+                  className="group flex flex-col items-center text-center p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-amber-600/40 hover:bg-zinc-900/80 transition-all duration-200"
+                >
+                  <div className="w-12 h-12 rounded-full bg-amber-600/10 border border-amber-600/20 flex items-center justify-center mb-4 group-hover:bg-amber-600/20 transition-colors">
+                    <Icon size={22} className="text-amber-500" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-zinc-200 mb-1 group-hover:text-amber-400 transition-colors">
+                    {tmpl.title}
+                  </h3>
+                  <p className="text-xs text-zinc-500 leading-relaxed">{tmpl.desc}</p>
+                  <span className="inline-flex items-center gap-1 mt-3 text-[10px] text-amber-500/70 group-hover:text-amber-400 transition-colors uppercase tracking-wider font-medium">
+                    Use Template <ArrowRight size={10} />
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {/* Saved brochures */}
         {brochures.length > 0 && (
-          <div>
+          <div className="mb-20">
             <h2 className="text-sm text-zinc-400 uppercase tracking-wider mb-4 font-medium">
               Saved Brochures
             </h2>
@@ -104,24 +218,63 @@ export default function LandingPage() {
           </div>
         )}
 
-        {/* Sample preview mockup */}
-        <div className="mt-16 text-center">
-          <p className="text-xs text-zinc-600 mb-4 uppercase tracking-wider">Preview</p>
-          <div className="mx-auto max-w-xs bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-2xl">
-            <div className="aspect-[3/4] bg-[#0A0A0A] rounded-lg border border-[#C9A84C]/30 flex flex-col items-center justify-center p-8">
-              <div className="text-[#C9A84C] text-xs tracking-[4px] uppercase mb-2">Celebration of Life</div>
-              <div className="text-[#C9A84C]/60 text-[10px] italic mb-4">In Loving Memory of</div>
-              <div className="w-16 h-20 rounded-full border border-[#C9A84C]/40 mb-4 flex items-center justify-center">
-                <span className="text-[#C9A84C]/30 text-lg">✝</span>
-              </div>
-              <div className="text-[#C9A84C] text-sm font-bold tracking-wider text-center leading-relaxed">
-                FULL NAME
-              </div>
-              <div className="text-[#E8D48B]/50 text-[9px] mt-2">1948 — 2025</div>
-            </div>
+        {/* Features */}
+        <div className="mb-20">
+          <div className="text-center mb-8">
+            <p className="text-xs text-amber-500/80 uppercase tracking-wider mb-2 font-medium">Everything You Need</p>
+            <h2
+              className="text-2xl md:text-3xl font-bold text-white"
+              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+            >
+              Powerful Features
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {FEATURES.map((f, i) => {
+              const Icon = f.icon
+              return (
+                <div key={i} className="p-5 bg-zinc-900 border border-zinc-800 rounded-xl">
+                  <div className="w-9 h-9 rounded-lg bg-amber-600/10 border border-amber-600/20 flex items-center justify-center mb-3">
+                    <Icon size={16} className="text-amber-500" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-zinc-200 mb-1">{f.title}</h3>
+                  <p className="text-xs text-zinc-500 leading-relaxed">{f.desc}</p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Choose Your Theme */}
+        <div className="mb-10">
+          <div className="text-center mb-8">
+            <p className="text-xs text-amber-500/80 uppercase tracking-wider mb-2 font-medium">Personalize Your Design</p>
+            <h2
+              className="text-2xl md:text-3xl font-bold text-white"
+              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+            >
+              Choose Your Theme
+            </h2>
+            <p className="text-zinc-500 text-sm mt-2 max-w-lg mx-auto">
+              Each theme is carefully crafted for a dignified, professional look. Pick one to get started.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {Object.keys(themes).map((key) => (
+              <ThemePreviewCard
+                key={key}
+                themeKey={key}
+                onClick={() => handleThemeSelect(key)}
+              />
+            ))}
           </div>
         </div>
       </div>
+
+      {/* Example brochure dialog */}
+      <ExampleBrochureDialog open={exampleOpen} onOpenChange={setExampleOpen} />
     </div>
   )
 }

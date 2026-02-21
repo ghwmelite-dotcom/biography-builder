@@ -1,17 +1,36 @@
+import { useState } from 'react'
 import { useBrochureStore } from '../../stores/brochureStore'
 import ImageUploader from './ImageUploader'
+import WordCountIndicator from './WordCountIndicator'
+import WritingPromptsDialog from './WritingPromptsDialog'
+import { biographyWritingGuide } from '../../utils/writingPrompts'
+import { Lightbulb } from 'lucide-react'
 
 export default function BiographyForm() {
   const store = useBrochureStore()
-  const wordCount = (store.biography || '').split(/\s+/).filter(Boolean).length
+  const [guideOpen, setGuideOpen] = useState(false)
+
+  const handleInsertGuideText = (text) => {
+    store.updateField('biography', text)
+  }
 
   return (
     <div className="space-y-4">
       <div>
         <div className="flex items-center justify-between mb-1">
           <label className="text-xs text-zinc-400">Biography Text</label>
-          <span className="text-[10px] text-zinc-600">{wordCount} words</span>
+          <WordCountIndicator text={store.biography} min={300} max={500} />
         </div>
+
+        {/* Writing guide button */}
+        <button
+          onClick={() => setGuideOpen(true)}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 mb-2 text-[11px] bg-zinc-800 border border-zinc-700 rounded-md text-amber-400 hover:text-amber-300 hover:border-amber-600/50 transition-colors"
+        >
+          <Lightbulb size={12} />
+          Writing guide
+        </button>
+
         <textarea
           value={store.biography}
           onChange={(e) => store.updateField('biography', e.target.value)}
@@ -33,6 +52,7 @@ export default function BiographyForm() {
                 onChange={(v) => store.updateBiographyPhoto(i, v)}
                 label={`Photo ${i + 1}`}
                 aspectRatio="4/3"
+                recommendedText="Recommended: 800x600px landscape"
               />
               <input
                 type="text"
@@ -45,6 +65,14 @@ export default function BiographyForm() {
           ))}
         </div>
       </div>
+
+      {/* Writing prompts dialog */}
+      <WritingPromptsDialog
+        open={guideOpen}
+        onOpenChange={setGuideOpen}
+        guide={biographyWritingGuide}
+        onInsert={handleInsertGuideText}
+      />
     </div>
   )
 }

@@ -33,6 +33,7 @@ function saveBrochuresList(list) {
 }
 
 const MAX_HISTORY = 30
+const MAX_SNAPSHOTS = 5
 
 export const useBrochureStore = create((set, get) => ({
   // Current brochure data
@@ -46,6 +47,11 @@ export const useBrochureStore = create((set, get) => ({
 
   // Brochures list
   brochuresList: loadBrochuresList(),
+
+  // New state for edit tracking, auto-save, and snapshots
+  editCountSinceLastSave: 0,
+  lastAutoSaveAt: null,
+  snapshots: [],
 
   // Push state for undo
   _pushHistory: () => {
@@ -61,7 +67,7 @@ export const useBrochureStore = create((set, get) => ({
   updateField: (field, value) => {
     const state = get()
     state._pushHistory()
-    set({ [field]: value, isDirty: true })
+    set({ [field]: value, isDirty: true, editCountSinceLastSave: state.editCountSinceLastSave + 1 })
   },
 
   // Update nested fields
@@ -74,6 +80,7 @@ export const useBrochureStore = create((set, get) => ({
       set({
         [parent]: { ...state[parent], [child]: value },
         isDirty: true,
+        editCountSinceLastSave: state.editCountSinceLastSave + 1,
       })
     }
   },
@@ -87,6 +94,7 @@ export const useBrochureStore = create((set, get) => ({
     set({
       orderOfService: { ...state.orderOfService, [section]: items },
       isDirty: true,
+      editCountSinceLastSave: state.editCountSinceLastSave + 1,
     })
   },
 
@@ -128,7 +136,7 @@ export const useBrochureStore = create((set, get) => ({
     state._pushHistory()
     const tributes = [...state.tributes]
     tributes[index] = { ...tributes[index], [field]: value }
-    set({ tributes, isDirty: true })
+    set({ tributes, isDirty: true, editCountSinceLastSave: state.editCountSinceLastSave + 1 })
   },
 
   addTribute: () => {
@@ -168,6 +176,7 @@ export const useBrochureStore = create((set, get) => ({
     set({
       officials: { ...state.officials, [section]: list },
       isDirty: true,
+      editCountSinceLastSave: state.editCountSinceLastSave + 1,
     })
   },
 
@@ -255,6 +264,56 @@ export const useBrochureStore = create((set, get) => ({
   canUndo: () => get().historyIndex > 0,
   canRedo: () => get().historyIndex < get().history.length - 1,
 
+  // Snapshot management
+  createSnapshot: (label) => {
+    const state = get()
+    const data = extractData(state)
+    const snap = {
+      id: `snap-${Date.now()}`,
+      label: label || 'Manual snapshot',
+      timestamp: new Date().toISOString(),
+      data,
+    }
+    const snapshots = [snap, ...state.snapshots].slice(0, MAX_SNAPSHOTS)
+    set({ snapshots })
+  },
+
+  restoreSnapshot: (id) => {
+    const state = get()
+    const snap = state.snapshots.find(s => s.id === id)
+    if (snap) {
+      set({ ...snap.data, isDirty: true, history: [], historyIndex: -1 })
+    }
+  },
+
+  deleteSnapshot: (id) => {
+    set({ snapshots: get().snapshots.filter(s => s.id !== id) })
+  },
+
+  // Smart filename helper
+  getSmartFilename: (ext) => {
+    const state = get()
+    const name = state.fullName?.trim()
+    if (name) {
+      return `${name.replace(/\s+/g, '-')}-Memorial-Brochure.${ext}`
+    }
+    return `Memorial-Brochure.${ext}`
+  },
+
+  // Load template data (like newBrochure but merges template data with defaults)
+  loadTemplate: (data) => {
+    set({
+      ...defaultData,
+      ...data,
+      currentId: null,
+      isDirty: false,
+      history: [],
+      historyIndex: -1,
+      editCountSinceLastSave: 0,
+      lastAutoSaveAt: null,
+    })
+  },
+
   // Save / Load
   saveBrochure: () => {
     const state = get()
@@ -279,7 +338,7 @@ export const useBrochureStore = create((set, get) => ({
       list.push(entry)
     }
     saveBrochuresList(list)
-    set({ isDirty: false, brochuresList: list })
+    set({ isDirty: false, brochuresList: list, editCountSinceLastSave: 0, lastAutoSaveAt: new Date().toISOString() })
     return id
   },
 
@@ -304,6 +363,8 @@ export const useBrochureStore = create((set, get) => ({
       isDirty: false,
       history: [],
       historyIndex: -1,
+      editCountSinceLastSave: 0,
+      lastAutoSaveAt: null,
     })
   },
 
@@ -316,17 +377,21 @@ export const useBrochureStore = create((set, get) => ({
   importJSON: (jsonStr) => {
     try {
       const data = JSON.parse(jsonStr)
-      set({ ...data, isDirty: true, history: [], historyIndex: -1 })
-      return true
+      return data
     } catch {
       return false
     }
+  },
+
+  applyImport: (data) => {
+    set({ ...data, isDirty: true, history: [], historyIndex: -1 })
   },
 }))
 
 function extractData(state) {
   const {
     currentId, isDirty, history, historyIndex, brochuresList,
+    editCountSinceLastSave, lastAutoSaveAt, snapshots,
     _pushHistory, updateField, updateNested, updateServiceItem,
     addServiceItem, removeServiceItem, moveServiceItem,
     updateTribute, addTribute, removeTribute,
@@ -335,7 +400,9 @@ function extractData(state) {
     updateBiographyPhoto, updateBiographyCaption,
     undo, redo, canUndo, canRedo,
     saveBrochure, loadBrochure, deleteBrochure, newBrochure,
-    exportJSON, importJSON,
+    exportJSON, importJSON, applyImport,
+    createSnapshot, restoreSnapshot, deleteSnapshot,
+    getSmartFilename, loadTemplate,
     ...data
   } = state
   return data

@@ -42,6 +42,24 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      gridTemplateRows: {
+        '0fr': '0fr',
+        '1fr': '1fr',
+      },
+      keyframes: {
+        'accordion-down': {
+          from: { gridTemplateRows: '0fr' },
+          to: { gridTemplateRows: '1fr' },
+        },
+        'accordion-up': {
+          from: { gridTemplateRows: '1fr' },
+          to: { gridTemplateRows: '0fr' },
+        },
+      },
+      animation: {
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up': 'accordion-up 0.2s ease-out',
+      },
     },
   },
   plugins: [],

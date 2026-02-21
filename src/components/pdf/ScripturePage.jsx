@@ -1,13 +1,15 @@
 import { Page, View, Text } from '@react-pdf/renderer'
 import { PageBorders, CrossSymbol, OrnamentalDivider, PageNumber } from './decorations'
 import { createStyles } from './styles'
-import { defaultScriptures } from '../../utils/defaultData'
+import { getAllScriptures } from '../../utils/templates'
+
+const allScriptures = getAllScriptures()
 
 export default function ScripturePage({ data, theme }) {
   const s = createStyles(theme)
 
   const scripture = data.scriptureKey && data.scriptureKey !== 'custom'
-    ? defaultScriptures[data.scriptureKey]
+    ? allScriptures[data.scriptureKey]
     : null
 
   const title = scripture ? scripture.title : 'SCRIPTURE'

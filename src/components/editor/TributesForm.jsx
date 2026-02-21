@@ -1,10 +1,48 @@
 import { useBrochureStore } from '../../stores/brochureStore'
-import { Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, BookOpen } from 'lucide-react'
 import { useState } from 'react'
+import { tributeTemplates } from '../../utils/templates'
+import { tributeWritingGuides } from '../../utils/writingPrompts'
+import WordCountIndicator from './WordCountIndicator'
+import WritingPromptsDialog from './WritingPromptsDialog'
 
 export default function TributesForm() {
   const store = useBrochureStore()
   const [expandedIndex, setExpandedIndex] = useState(0)
+  const [templateDropdownIndex, setTemplateDropdownIndex] = useState(-1)
+  const [writingGuideOpen, setWritingGuideOpen] = useState(false)
+  const [activeGuide, setActiveGuide] = useState(null)
+  const [activeGuideIndex, setActiveGuideIndex] = useState(-1)
+
+  const handleApplyTemplate = (index, templateKey) => {
+    const template = tributeTemplates[templateKey]
+    if (!template) return
+    store.updateTribute(index, 'title', template.title)
+    store.updateTribute(index, 'subtitle', template.subtitle)
+    store.updateTribute(index, 'openingVerse', template.openingVerse)
+    setTemplateDropdownIndex(-1)
+  }
+
+  const handleOpenWritingGuide = (index) => {
+    // Try to match a guide based on tribute title
+    const tribute = store.tributes[index]
+    const titleLower = (tribute.title || '').toLowerCase()
+    let guideKey = 'general'
+    if (titleLower.includes('children') || titleLower.includes('child')) guideKey = 'children'
+    else if (titleLower.includes('grandchild')) guideKey = 'grandchildren'
+    else if (titleLower.includes('family')) guideKey = 'family'
+    else if (titleLower.includes('friend')) guideKey = 'friends'
+    else if (titleLower.includes('colleague')) guideKey = 'colleagues'
+    setActiveGuide(tributeWritingGuides[guideKey])
+    setActiveGuideIndex(index)
+    setWritingGuideOpen(true)
+  }
+
+  const handleInsertGuideText = (text) => {
+    if (activeGuideIndex >= 0) {
+      store.updateTribute(activeGuideIndex, 'body', text)
+    }
+  }
 
   return (
     <div className="space-y-2">
@@ -16,8 +54,14 @@ export default function TributesForm() {
             className="w-full flex items-center justify-between px-3 py-2.5 bg-zinc-900 hover:bg-zinc-800 transition-colors"
           >
             <div className="flex items-center gap-2">
-              {expandedIndex === i ? <ChevronDown size={14} className="text-zinc-500" /> : <ChevronRight size={14} className="text-zinc-500" />}
-              <span className="text-sm text-zinc-300">{tribute.title || `Tribute ${i + 1}`}</span>
+              {expandedIndex === i ? (
+                <ChevronDown size={14} className="text-zinc-500" />
+              ) : (
+                <ChevronRight size={14} className="text-zinc-500" />
+              )}
+              <span className="text-sm text-zinc-300">
+                {tribute.title || `Tribute ${i + 1}`}
+              </span>
             </div>
             <button
               onClick={(e) => {
@@ -25,6 +69,7 @@ export default function TributesForm() {
                 if (confirm('Remove this tribute section?')) store.removeTribute(i)
               }}
               className="p-1 text-zinc-600 hover:text-red-400 transition-colors"
+              aria-label="Remove tribute"
             >
               <Trash2 size={12} />
             </button>
@@ -33,6 +78,44 @@ export default function TributesForm() {
           {/* Accordion content */}
           {expandedIndex === i && (
             <div className="p-3 space-y-3 bg-zinc-900/50">
+              {/* Template and writing guide buttons */}
+              <div className="flex gap-2 flex-wrap">
+                <div className="relative">
+                  <button
+                    onClick={() =>
+                      setTemplateDropdownIndex(templateDropdownIndex === i ? -1 : i)
+                    }
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] bg-zinc-800 border border-zinc-700 rounded-md text-zinc-300 hover:text-zinc-100 hover:border-zinc-600 transition-colors"
+                  >
+                    <BookOpen size={12} />
+                    Browse tribute templates...
+                  </button>
+                  {templateDropdownIndex === i && (
+                    <div className="absolute top-full left-0 mt-1 z-20 w-64 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl overflow-hidden">
+                      {Object.entries(tributeTemplates).map(([key, tpl]) => (
+                        <button
+                          key={key}
+                          onClick={() => handleApplyTemplate(i, key)}
+                          className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-800 transition-colors border-b border-zinc-800 last:border-b-0"
+                        >
+                          <span className="text-zinc-200">{tpl.title}</span>
+                          <span className="block text-[10px] text-zinc-500 mt-0.5">
+                            {tpl.subtitle}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleOpenWritingGuide(i)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] bg-zinc-800 border border-zinc-700 rounded-md text-amber-400 hover:text-amber-300 hover:border-amber-600/50 transition-colors"
+                >
+                  <Lightbulb size={12} />
+                  Help me write
+                </button>
+              </div>
+
               <div>
                 <label className="block text-xs text-zinc-400 mb-1">Tribute Title</label>
                 <input
@@ -68,9 +151,7 @@ export default function TributesForm() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs text-zinc-400">Tribute Body</label>
-                  <span className="text-[10px] text-zinc-600">
-                    {(tribute.body || '').split(/\s+/).filter(Boolean).length} words
-                  </span>
+                  <WordCountIndicator text={tribute.body} min={150} max={300} />
                 </div>
                 <textarea
                   value={tribute.body}
@@ -101,6 +182,14 @@ export default function TributesForm() {
       >
         <Plus size={14} /> Add Tribute Section
       </button>
+
+      {/* Writing prompts dialog */}
+      <WritingPromptsDialog
+        open={writingGuideOpen}
+        onOpenChange={setWritingGuideOpen}
+        guide={activeGuide}
+        onInsert={handleInsertGuideText}
+      />
     </div>
   )
 }

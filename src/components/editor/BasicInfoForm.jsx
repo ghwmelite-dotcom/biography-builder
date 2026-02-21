@@ -1,72 +1,144 @@
+import { useState } from 'react'
 import { useBrochureStore } from '../../stores/brochureStore'
+import { validateField } from '../../utils/validation'
 import { themes } from '../../utils/themes'
 
 const TITLES = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Rev.', 'Prof.', 'Chief', 'Nana', 'Hon.', 'Togbe', 'Mama']
 
+function RequiredBadge() {
+  return (
+    <span className="ml-1.5 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide bg-red-400/10 text-red-400 rounded">
+      Required
+    </span>
+  )
+}
+
+function OptionalBadge() {
+  return (
+    <span className="ml-1.5 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide bg-zinc-800 text-zinc-500 rounded">
+      Optional
+    </span>
+  )
+}
+
 export default function BasicInfoForm() {
   const store = useBrochureStore()
+  const [touched, setTouched] = useState({})
+
+  const handleBlur = (field) => {
+    setTouched((prev) => ({ ...prev, [field]: true }))
+  }
+
+  const getValidation = (field) => {
+    if (!touched[field]) return { valid: true, error: null }
+    return validateField(field, store[field], store)
+  }
+
+  const fullNameValidation = getValidation('fullName')
+  const dateOfBirthValidation = getValidation('dateOfBirth')
+  const dateOfDeathValidation = getValidation('dateOfDeath')
+  const funeralDateValidation = getValidation('funeralDate')
+  const funeralVenueValidation = getValidation('funeralVenue')
+
+  const inputBase = 'w-full bg-zinc-900 border rounded-md px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-amber-600'
+  const borderNormal = 'border-zinc-700'
+  const borderError = 'border-red-500'
 
   return (
     <div className="space-y-4">
       {/* Title + Name */}
-      <div className="flex gap-3">
-        <div className="w-28">
-          <label className="block text-xs text-zinc-400 mb-1">Title</label>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="w-full sm:w-28">
+          <label className="block text-xs text-zinc-400 mb-1">
+            Title
+            <OptionalBadge />
+          </label>
           <select
             value={store.title}
             onChange={(e) => store.updateField('title', e.target.value)}
             className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-amber-600"
           >
-            <option value="">—</option>
+            <option value="">--</option>
             {TITLES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
         <div className="flex-1">
-          <label className="block text-xs text-zinc-400 mb-1">Full Name of Deceased</label>
+          <label className="block text-xs text-zinc-400 mb-1">
+            Full Name of Deceased
+            <RequiredBadge />
+          </label>
           <input
             type="text"
             value={store.fullName}
             onChange={(e) => store.updateField('fullName', e.target.value)}
+            onBlur={() => handleBlur('fullName')}
             placeholder="e.g. Josephine Worla Ameovi-Hodges"
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+            className={`${inputBase} ${!fullNameValidation.valid ? borderError : borderNormal} placeholder:text-zinc-600`}
           />
+          {!fullNameValidation.valid && (
+            <p className="text-[11px] text-red-400 mt-1">{fullNameValidation.error}</p>
+          )}
         </div>
       </div>
 
       {/* Dates */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs text-zinc-400 mb-1">Date of Birth</label>
+          <label className="block text-xs text-zinc-400 mb-1">
+            Date of Birth
+            <RequiredBadge />
+          </label>
           <input
             type="date"
             value={store.dateOfBirth}
             onChange={(e) => store.updateField('dateOfBirth', e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-amber-600"
+            onBlur={() => handleBlur('dateOfBirth')}
+            className={`${inputBase} ${!dateOfBirthValidation.valid ? borderError : borderNormal}`}
           />
+          {!dateOfBirthValidation.valid && (
+            <p className="text-[11px] text-red-400 mt-1">{dateOfBirthValidation.error}</p>
+          )}
         </div>
         <div>
-          <label className="block text-xs text-zinc-400 mb-1">Date of Death</label>
+          <label className="block text-xs text-zinc-400 mb-1">
+            Date of Death
+            <RequiredBadge />
+          </label>
           <input
             type="date"
             value={store.dateOfDeath}
             onChange={(e) => store.updateField('dateOfDeath', e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-amber-600"
+            onBlur={() => handleBlur('dateOfDeath')}
+            className={`${inputBase} ${!dateOfDeathValidation.valid ? borderError : borderNormal}`}
           />
+          {!dateOfDeathValidation.valid && (
+            <p className="text-[11px] text-red-400 mt-1">{dateOfDeathValidation.error}</p>
+          )}
         </div>
         <div>
-          <label className="block text-xs text-zinc-400 mb-1">Funeral Date</label>
+          <label className="block text-xs text-zinc-400 mb-1">
+            Funeral Date
+            <RequiredBadge />
+          </label>
           <input
             type="date"
             value={store.funeralDate}
             onChange={(e) => store.updateField('funeralDate', e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-amber-600"
+            onBlur={() => handleBlur('funeralDate')}
+            className={`${inputBase} ${!funeralDateValidation.valid ? borderError : borderNormal}`}
           />
+          {!funeralDateValidation.valid && (
+            <p className="text-[11px] text-red-400 mt-1">{funeralDateValidation.error}</p>
+          )}
         </div>
       </div>
 
       {/* Time */}
       <div>
-        <label className="block text-xs text-zinc-400 mb-1">Funeral Start Time</label>
+        <label className="block text-xs text-zinc-400 mb-1">
+          Funeral Start Time
+          <OptionalBadge />
+        </label>
         <input
           type="time"
           value={store.funeralTime}
@@ -77,18 +149,28 @@ export default function BasicInfoForm() {
 
       {/* Venue */}
       <div>
-        <label className="block text-xs text-zinc-400 mb-1">Funeral Venue</label>
+        <label className="block text-xs text-zinc-400 mb-1">
+          Funeral Venue
+          <RequiredBadge />
+        </label>
         <input
           type="text"
           value={store.funeralVenue}
           onChange={(e) => store.updateField('funeralVenue', e.target.value)}
-          className="w-full bg-zinc-900 border border-zinc-700 rounded-md px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+          onBlur={() => handleBlur('funeralVenue')}
+          className={`${inputBase} ${!funeralVenueValidation.valid ? borderError : borderNormal} placeholder:text-zinc-600`}
         />
+        {!funeralVenueValidation.valid && (
+          <p className="text-[11px] text-red-400 mt-1">{funeralVenueValidation.error}</p>
+        )}
       </div>
 
       {/* Burial Location */}
       <div>
-        <label className="block text-xs text-zinc-400 mb-1">Burial Location</label>
+        <label className="block text-xs text-zinc-400 mb-1">
+          Burial Location
+          <OptionalBadge />
+        </label>
         <input
           type="text"
           value={store.burialLocation}

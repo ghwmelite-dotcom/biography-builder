@@ -20,6 +20,7 @@ export default function PhotoGalleryForm() {
               onChange={(v) => store.updateGalleryPhoto(i, 'src', v)}
               label={`Photo ${i + 1}`}
               aspectRatio="4/3"
+              recommendedText="Recommended: 800x600px landscape"
             />
             <input
               type="text"
@@ -39,6 +40,7 @@ export default function PhotoGalleryForm() {
               <button
                 onClick={() => store.removeGalleryPhoto(i)}
                 className="absolute top-1 right-1 p-1 bg-zinc-900/80 text-zinc-500 hover:text-red-400 rounded opacity-0 group-hover:opacity-100 transition-all"
+                aria-label="Remove photo"
               >
                 <Trash2 size={12} />
               </button>
