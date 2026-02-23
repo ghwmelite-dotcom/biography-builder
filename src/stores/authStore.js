@@ -1,0 +1,139 @@
+import { create } from 'zustand'
+
+const AUTH_KEY = 'fp-auth'
+const API_BASE = import.meta.env.VITE_AUTH_API_URL || 'https://funeralpress-auth-api.ghwmelite.workers.dev'
+
+function loadAuth() {
+  try {
+    const raw = localStorage.getItem(AUTH_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return null
+}
+
+function saveAuth(data) {
+  try {
+    if (data) localStorage.setItem(AUTH_KEY, JSON.stringify(data))
+    else localStorage.removeItem(AUTH_KEY)
+  } catch { /* ignore */ }
+}
+
+function isTokenExpired(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return payload.exp * 1000 < Date.now() - 60000 // 1 min buffer
+  } catch {
+    return true
+  }
+}
+
+export const useAuthStore = create((set, get) => ({
+  user: null,
+  accessToken: null,
+  refreshToken: null,
+  isLoading: false,
+  isSyncing: false,
+  hasMigrated: false,
+
+  hydrate: () => {
+    const saved = loadAuth()
+    if (saved) {
+      set({
+        user: saved.user,
+        accessToken: saved.accessToken,
+        refreshToken: saved.refreshToken,
+        hasMigrated: saved.hasMigrated || false,
+      })
+    }
+  },
+
+  isLoggedIn: () => {
+    const { user, accessToken } = get()
+    return !!(user && accessToken)
+  },
+
+  handleGoogleLogin: async (credential) => {
+    set({ isLoading: true })
+    try {
+      const res = await fetch(`${API_BASE}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `Login failed (${res.status})`)
+      }
+      const data = await res.json()
+      const state = {
+        user: data.user,
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+      }
+      set({ ...state, isLoading: false })
+      saveAuth({ ...state, hasMigrated: get().hasMigrated })
+      return data
+    } catch (err) {
+      set({ isLoading: false })
+      throw err
+    }
+  },
+
+  getToken: async () => {
+    const { accessToken, refreshToken } = get()
+    if (!accessToken) return null
+    if (!isTokenExpired(accessToken)) return accessToken
+
+    // Refresh
+    if (!refreshToken) {
+      get().clearAuth()
+      return null
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      })
+      if (!res.ok) {
+        get().clearAuth()
+        return null
+      }
+      const data = await res.json()
+      set({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken })
+      saveAuth({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken, hasMigrated: get().hasMigrated })
+      return data.accessToken
+    } catch {
+      get().clearAuth()
+      return null
+    }
+  },
+
+  logout: async () => {
+    const { accessToken, refreshToken } = get()
+    try {
+      if (accessToken) {
+        await fetch(`${API_BASE}/auth/logout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ refreshToken }),
+        })
+      }
+    } catch { /* best effort */ }
+    get().clearAuth()
+  },
+
+  clearAuth: () => {
+    set({ user: null, accessToken: null, refreshToken: null })
+    saveAuth(null)
+  },
+
+  setMigrated: () => {
+    set({ hasMigrated: true })
+    const saved = loadAuth()
+    if (saved) saveAuth({ ...saved, hasMigrated: true })
+  },
+
+  setSyncing: (v) => set({ isSyncing: v }),
+}))

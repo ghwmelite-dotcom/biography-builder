@@ -1,10 +1,10 @@
 import { create } from 'zustand'
-import { posterDefaultData } from '../utils/posterDefaultData'
 import { syncDesign, deleteDesignFromCloud } from '../utils/syncEngine'
 import { useAuthStore } from './authStore'
+import { thankYouDefaultData } from '../utils/thankYouDefaultData'
 
-const STORAGE_KEY = 'obituary-poster-data'
-const POSTERS_KEY = 'obituary-posters-list'
+const STORAGE_KEY = 'funeral-thankyou-data'
+const LIST_KEY = 'funeral-thankyou-list'
 
 function loadFromStorage(id) {
   try {
@@ -20,42 +20,37 @@ function saveToStorage(id, data) {
   } catch { /* ignore */ }
 }
 
-function loadPostersList() {
+function loadThankYouList() {
   try {
-    const raw = localStorage.getItem(POSTERS_KEY)
+    const raw = localStorage.getItem(LIST_KEY)
     if (raw) return JSON.parse(raw)
   } catch { /* ignore */ }
   return []
 }
 
-function savePostersList(list) {
+function saveThankYouList(list) {
   try {
-    localStorage.setItem(POSTERS_KEY, JSON.stringify(list))
+    localStorage.setItem(LIST_KEY, JSON.stringify(list))
   } catch { /* ignore */ }
 }
 
 const MAX_HISTORY = 30
 const MAX_SNAPSHOTS = 5
 
-export const usePosterStore = create((set, get) => ({
-  // Current poster data
-  ...posterDefaultData,
+export const useThankYouStore = create((set, get) => ({
+  ...thankYouDefaultData,
   currentId: null,
   isDirty: false,
 
-  // History for undo/redo
   history: [],
   historyIndex: -1,
 
-  // Posters list
-  postersList: loadPostersList(),
+  thankYouList: loadThankYouList(),
 
-  // Edit tracking, auto-save, and snapshots
   editCountSinceLastSave: 0,
   lastAutoSaveAt: null,
   snapshots: [],
 
-  // Push state for undo
   _pushHistory: () => {
     const state = get()
     const snapshot = extractData(state)
@@ -65,62 +60,12 @@ export const usePosterStore = create((set, get) => ({
     set({ history, historyIndex: history.length - 1 })
   },
 
-  // Update a field
   updateField: (field, value) => {
     const state = get()
     state._pushHistory()
     set({ [field]: value, isDirty: true, editCountSinceLastSave: state.editCountSinceLastSave + 1 })
   },
 
-  // Update nested fields
-  updateNested: (path, value) => {
-    const state = get()
-    state._pushHistory()
-    const parts = path.split('.')
-    if (parts.length === 2) {
-      const [parent, child] = parts
-      set({
-        [parent]: { ...state[parent], [child]: value },
-        isDirty: true,
-        editCountSinceLastSave: state.editCountSinceLastSave + 1,
-      })
-    }
-  },
-
-  // Update a funeral arrangement item
-  updateFuneralArrangement: (index, field, value) => {
-    const state = get()
-    state._pushHistory()
-    const arrangements = [...state.funeralArrangements]
-    arrangements[index] = { ...arrangements[index], [field]: value }
-    set({
-      funeralArrangements: arrangements,
-      isDirty: true,
-      editCountSinceLastSave: state.editCountSinceLastSave + 1,
-    })
-  },
-
-  // Add a funeral arrangement item
-  addFuneralArrangement: () => {
-    const state = get()
-    state._pushHistory()
-    set({
-      funeralArrangements: [...state.funeralArrangements, { label: '', value: '' }],
-      isDirty: true,
-    })
-  },
-
-  // Remove a funeral arrangement item
-  removeFuneralArrangement: (index) => {
-    const state = get()
-    state._pushHistory()
-    set({
-      funeralArrangements: state.funeralArrangements.filter((_, i) => i !== index),
-      isDirty: true,
-    })
-  },
-
-  // Undo/Redo
   undo: () => {
     const { history, historyIndex } = get()
     if (historyIndex <= 0) return
@@ -138,7 +83,6 @@ export const usePosterStore = create((set, get) => ({
   canUndo: () => get().historyIndex > 0,
   canRedo: () => get().historyIndex < get().history.length - 1,
 
-  // Snapshot management
   createSnapshot: (label) => {
     const state = get()
     const data = extractData(state)
@@ -164,32 +108,30 @@ export const usePosterStore = create((set, get) => ({
     set({ snapshots: get().snapshots.filter(s => s.id !== id) })
   },
 
-  // Smart filename helper
   getSmartFilename: (ext) => {
     const state = get()
     const name = state.fullName?.trim()
     if (name) {
-      return `${name.replace(/\s+/g, '-')}-Obituary-Poster.${ext}`
+      return `${name.replace(/\s+/g, '-')}-Thank-You-Card.${ext}`
     }
-    return `Obituary-Poster.${ext}`
+    return `Thank-You-Card.${ext}`
   },
 
-  // Save / Load
-  savePoster: () => {
+  saveThankYou: () => {
     const state = get()
     let id = state.currentId
     if (!id) {
-      id = `poster-${Date.now()}`
+      id = `thankyou-${Date.now()}`
       set({ currentId: id })
     }
     const data = extractData(state)
     saveToStorage(id, data)
 
-    const list = loadPostersList()
+    const list = loadThankYouList()
     const existing = list.findIndex((p) => p.id === id)
     const entry = {
       id,
-      name: `${state.headerTitle} ${state.fullName}`.trim(),
+      name: `Thank You ${state.fullName}`.trim(),
       updatedAt: new Date().toISOString(),
     }
     if (existing >= 0) {
@@ -197,34 +139,34 @@ export const usePosterStore = create((set, get) => ({
     } else {
       list.push(entry)
     }
-    savePostersList(list)
-    set({ isDirty: false, postersList: list, editCountSinceLastSave: 0, lastAutoSaveAt: new Date().toISOString() })
+    saveThankYouList(list)
+    set({ isDirty: false, thankYouList: list, editCountSinceLastSave: 0, lastAutoSaveAt: new Date().toISOString() })
 
     if (useAuthStore.getState().isLoggedIn()) {
-      syncDesign('poster', id, data, entry.name, entry.updatedAt)
+      syncDesign('thankYou', id, data, entry.name, entry.updatedAt)
     }
 
     return id
   },
 
-  loadPoster: (id) => {
+  loadThankYou: (id) => {
     const data = loadFromStorage(id)
     if (data) {
       set({ ...data, currentId: id, isDirty: false, history: [], historyIndex: -1 })
     }
   },
 
-  deletePoster: (id) => {
+  deleteThankYou: (id) => {
     try { localStorage.removeItem(`${STORAGE_KEY}-${id}`) } catch { /* ignore */ }
-    const list = loadPostersList().filter((p) => p.id !== id)
-    savePostersList(list)
-    set({ postersList: list })
+    const list = loadThankYouList().filter((p) => p.id !== id)
+    saveThankYouList(list)
+    set({ thankYouList: list })
     deleteDesignFromCloud(id)
   },
 
-  newPoster: () => {
+  newThankYou: () => {
     set({
-      ...posterDefaultData,
+      ...thankYouDefaultData,
       currentId: null,
       isDirty: false,
       history: [],
@@ -236,17 +178,17 @@ export const usePosterStore = create((set, get) => ({
 
   loadFromCloudData: (id, data, name) => {
     saveToStorage(id, data)
-    const list = loadPostersList()
+    const list = loadThankYouList()
     if (!list.find((p) => p.id === id)) {
       list.push({ id, name, updatedAt: new Date().toISOString() })
+      saveThankYouList(list)
     }
-    savePostersList(list)
-    set({ ...data, currentId: id, isDirty: false, postersList: list, history: [], historyIndex: -1 })
+    set({ ...data, currentId: id, isDirty: false, thankYouList: list, history: [], historyIndex: -1 })
   },
 
   loadTemplate: (data) => {
     set({
-      ...posterDefaultData,
+      ...thankYouDefaultData,
       ...data,
       currentId: null,
       isDirty: false,
@@ -257,7 +199,6 @@ export const usePosterStore = create((set, get) => ({
     })
   },
 
-  // Export/Import JSON
   exportJSON: () => {
     const data = extractData(get())
     return JSON.stringify(data, null, 2)
@@ -279,12 +220,11 @@ export const usePosterStore = create((set, get) => ({
 
 function extractData(state) {
   const {
-    currentId, isDirty, history, historyIndex, postersList,
+    currentId, isDirty, history, historyIndex, thankYouList,
     editCountSinceLastSave, lastAutoSaveAt, snapshots,
-    _pushHistory, updateField, updateNested,
-    updateFuneralArrangement, addFuneralArrangement, removeFuneralArrangement,
+    _pushHistory, updateField,
     undo, redo, canUndo, canRedo,
-    savePoster, loadPoster, deletePoster, newPoster, loadFromCloudData, loadTemplate,
+    saveThankYou, loadThankYou, deleteThankYou, newThankYou, loadFromCloudData, loadTemplate,
     exportJSON, importJSON, applyImport,
     createSnapshot, restoreSnapshot, deleteSnapshot,
     getSmartFilename,

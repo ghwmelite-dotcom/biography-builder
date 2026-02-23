@@ -1,44 +1,39 @@
 import { Link, useLocation } from 'react-router-dom'
-import { BookOpen, Undo2, Redo2, Save, Download, Upload, History, CalendarCheck, Share2, Sun, Moon } from 'lucide-react'
-import { useBrochureStore } from '../../stores/brochureStore'
+import { Mail, Undo2, Redo2, Save, Download, Upload, History, Sun, Moon } from 'lucide-react'
+import { useInvitationStore } from '../../stores/invitationStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { useAuthStore } from '../../stores/authStore'
 import GoogleLoginButton from '../auth/GoogleLoginButton'
 import UserMenu from '../auth/UserMenu'
 import { useNotification } from '../ui/notification'
 import { useRef, useState, useEffect } from 'react'
-import VersionsDialog from './VersionsDialog'
+import InvitationVersionsDialog from './InvitationVersionsDialog'
 import ImportConfirmDialog from './ImportConfirmDialog'
-import ShareOnlineDialog from './ShareOnlineDialog'
 
-export default function Navbar() {
+export default function InvitationNavbar() {
   const location = useLocation()
-  const store = useBrochureStore()
+  const store = useInvitationStore()
   const { theme, toggleTheme } = useThemeStore()
   const user = useAuthStore((s) => s.user)
   const { notify } = useNotification()
   const fileInputRef = useRef(null)
-  const isEditor = location.pathname.startsWith('/editor')
+  const isEditor = location.pathname.startsWith('/invitation')
 
-  // Auto-save indicator state
   const [showSaved, setShowSaved] = useState(false)
   const savedTimerRef = useRef(null)
 
-  // Dialog states
   const [versionsOpen, setVersionsOpen] = useState(false)
   const [importConfirmOpen, setImportConfirmOpen] = useState(false)
-  const [shareOnlineOpen, setShareOnlineOpen] = useState(false)
   const pendingImportData = useRef(null)
 
   const handleSave = () => {
-    store.saveBrochure()
-    notify('Brochure saved successfully!', 'success')
+    store.saveInvitation()
+    notify('Invitation saved successfully!', 'success')
     setShowSaved(true)
     if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
     savedTimerRef.current = setTimeout(() => setShowSaved(false), 3000)
   }
 
-  // Clean up timer on unmount
   useEffect(() => {
     return () => {
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
@@ -54,7 +49,7 @@ export default function Navbar() {
     a.download = store.getSmartFilename('json')
     a.click()
     URL.revokeObjectURL(url)
-    notify('Brochure exported as JSON', 'success')
+    notify('Invitation exported as JSON', 'success')
   }
 
   const handleFileSelect = (e) => {
@@ -64,7 +59,7 @@ export default function Navbar() {
     reader.onload = (ev) => {
       const data = store.importJSON(ev.target.result)
       if (!data) {
-        notify('Invalid brochure data file.', 'error')
+        notify('Invalid invitation data file.', 'error')
         return
       }
       pendingImportData.current = data
@@ -76,11 +71,10 @@ export default function Navbar() {
 
   const handleImportConfirm = () => {
     if (pendingImportData.current) {
-      // Create snapshot before import
       store.createSnapshot('Before import')
       store.applyImport(pendingImportData.current)
       pendingImportData.current = null
-      notify('Brochure data imported successfully!', 'success')
+      notify('Invitation data imported successfully!', 'success')
     }
   }
 
@@ -88,8 +82,8 @@ export default function Navbar() {
     <>
       <nav className="h-12 bg-background border-b border-border flex items-center justify-between px-4 shrink-0" role="navigation" aria-label="Main navigation">
         <Link to="/" className="flex items-center gap-2 text-card-foreground hover:text-foreground transition-colors" aria-label="Go to home page">
-          <BookOpen size={18} className="text-primary" />
-          <span className="text-sm font-semibold tracking-wide">FuneralPress</span>
+          <Mail size={18} className="text-primary" />
+          <span className="text-sm font-semibold tracking-wide">Invitation Builder</span>
         </Link>
 
         {isEditor && (
@@ -119,7 +113,7 @@ export default function Navbar() {
               onClick={handleSave}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
               title="Save"
-              aria-label="Save brochure"
+              aria-label="Save invitation"
             >
               <Save size={14} />
               <span className="hidden sm:inline">Save</span>
@@ -129,7 +123,7 @@ export default function Navbar() {
               onClick={handleExport}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
               title="Export JSON"
-              aria-label="Export brochure as JSON"
+              aria-label="Export invitation as JSON"
             >
               <Download size={14} />
               <span className="hidden sm:inline">Export</span>
@@ -139,7 +133,7 @@ export default function Navbar() {
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
               title="Import JSON"
-              aria-label="Import brochure from JSON file"
+              aria-label="Import invitation from JSON file"
             >
               <Upload size={14} />
               <span className="hidden sm:inline">Import</span>
@@ -155,28 +149,6 @@ export default function Navbar() {
               <span className="hidden sm:inline">Versions</span>
             </button>
 
-            <div className="w-px h-5 bg-accent mx-1" />
-
-            <Link
-              to="/programme"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              title="Day-of Programme"
-              aria-label="Open day-of programme"
-            >
-              <CalendarCheck size={14} />
-              <span className="hidden sm:inline">Day-of</span>
-            </Link>
-
-            <button
-              onClick={() => setShareOnlineOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              title="Share Online"
-              aria-label="Share brochure online"
-            >
-              <Share2 size={14} />
-              <span className="hidden sm:inline">Share</span>
-            </button>
-
             <input
               ref={fileInputRef}
               type="file"
@@ -186,7 +158,6 @@ export default function Navbar() {
               aria-hidden="true"
             />
 
-            {/* Auto-save indicator */}
             {showSaved ? (
               <span className="text-[10px] text-emerald-500 ml-2 animate-fade-in">Saved</span>
             ) : store.isDirty ? (
@@ -208,10 +179,8 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Dialogs */}
-      <VersionsDialog open={versionsOpen} onOpenChange={setVersionsOpen} />
+      <InvitationVersionsDialog open={versionsOpen} onOpenChange={setVersionsOpen} />
       <ImportConfirmDialog open={importConfirmOpen} onOpenChange={setImportConfirmOpen} onConfirm={handleImportConfirm} />
-      <ShareOnlineDialog open={shareOnlineOpen} onOpenChange={setShareOnlineOpen} />
     </>
   )
 }

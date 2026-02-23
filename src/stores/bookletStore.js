@@ -1,10 +1,10 @@
 import { create } from 'zustand'
-import { posterDefaultData } from '../utils/posterDefaultData'
 import { syncDesign, deleteDesignFromCloud } from '../utils/syncEngine'
 import { useAuthStore } from './authStore'
+import { bookletDefaultData } from '../utils/bookletDefaultData'
 
-const STORAGE_KEY = 'obituary-poster-data'
-const POSTERS_KEY = 'obituary-posters-list'
+const STORAGE_KEY = 'funeral-booklet-data'
+const LIST_KEY = 'funeral-booklet-list'
 
 function loadFromStorage(id) {
   try {
@@ -20,42 +20,37 @@ function saveToStorage(id, data) {
   } catch { /* ignore */ }
 }
 
-function loadPostersList() {
+function loadBookletsList() {
   try {
-    const raw = localStorage.getItem(POSTERS_KEY)
+    const raw = localStorage.getItem(LIST_KEY)
     if (raw) return JSON.parse(raw)
   } catch { /* ignore */ }
   return []
 }
 
-function savePostersList(list) {
+function saveBookletsList(list) {
   try {
-    localStorage.setItem(POSTERS_KEY, JSON.stringify(list))
+    localStorage.setItem(LIST_KEY, JSON.stringify(list))
   } catch { /* ignore */ }
 }
 
 const MAX_HISTORY = 30
 const MAX_SNAPSHOTS = 5
 
-export const usePosterStore = create((set, get) => ({
-  // Current poster data
-  ...posterDefaultData,
+export const useBookletStore = create((set, get) => ({
+  ...bookletDefaultData,
   currentId: null,
   isDirty: false,
 
-  // History for undo/redo
   history: [],
   historyIndex: -1,
 
-  // Posters list
-  postersList: loadPostersList(),
+  bookletsList: loadBookletsList(),
 
-  // Edit tracking, auto-save, and snapshots
   editCountSinceLastSave: 0,
   lastAutoSaveAt: null,
   snapshots: [],
 
-  // Push state for undo
   _pushHistory: () => {
     const state = get()
     const snapshot = extractData(state)
@@ -65,62 +60,56 @@ export const usePosterStore = create((set, get) => ({
     set({ history, historyIndex: history.length - 1 })
   },
 
-  // Update a field
   updateField: (field, value) => {
     const state = get()
     state._pushHistory()
     set({ [field]: value, isDirty: true, editCountSinceLastSave: state.editCountSinceLastSave + 1 })
   },
 
-  // Update nested fields
-  updateNested: (path, value) => {
+  updateServiceItem: (index, field, value) => {
     const state = get()
     state._pushHistory()
-    const parts = path.split('.')
-    if (parts.length === 2) {
-      const [parent, child] = parts
-      set({
-        [parent]: { ...state[parent], [child]: value },
-        isDirty: true,
-        editCountSinceLastSave: state.editCountSinceLastSave + 1,
-      })
-    }
-  },
-
-  // Update a funeral arrangement item
-  updateFuneralArrangement: (index, field, value) => {
-    const state = get()
-    state._pushHistory()
-    const arrangements = [...state.funeralArrangements]
-    arrangements[index] = { ...arrangements[index], [field]: value }
+    const orderOfService = [...state.orderOfService]
+    orderOfService[index] = { ...orderOfService[index], [field]: value }
     set({
-      funeralArrangements: arrangements,
+      orderOfService,
       isDirty: true,
       editCountSinceLastSave: state.editCountSinceLastSave + 1,
     })
   },
 
-  // Add a funeral arrangement item
-  addFuneralArrangement: () => {
+  addServiceItem: () => {
     const state = get()
     state._pushHistory()
     set({
-      funeralArrangements: [...state.funeralArrangements, { label: '', value: '' }],
+      orderOfService: [...state.orderOfService, { time: '', item: '' }],
       isDirty: true,
     })
   },
 
-  // Remove a funeral arrangement item
-  removeFuneralArrangement: (index) => {
+  removeServiceItem: (index) => {
     const state = get()
+    if (state.orderOfService.length <= 1) return
     state._pushHistory()
     set({
-      funeralArrangements: state.funeralArrangements.filter((_, i) => i !== index),
+      orderOfService: state.orderOfService.filter((_, i) => i !== index),
       isDirty: true,
     })
   },
 
-  // Undo/Redo
+  toggleHymn: (hymnId) => {
+    const state = get()
+    state._pushHistory()
+    const selectedHymns = state.selectedHymns.includes(hymnId)
+      ? state.selectedHymns.filter((id) => id !== hymnId)
+      : [...state.selectedHymns, hymnId]
+    set({
+      selectedHymns,
+      isDirty: true,
+      editCountSinceLastSave: state.editCountSinceLastSave + 1,
+    })
+  },
+
   undo: () => {
     const { history, historyIndex } = get()
     if (historyIndex <= 0) return
@@ -138,7 +127,6 @@ export const usePosterStore = create((set, get) => ({
   canUndo: () => get().historyIndex > 0,
   canRedo: () => get().historyIndex < get().history.length - 1,
 
-  // Snapshot management
   createSnapshot: (label) => {
     const state = get()
     const data = extractData(state)
@@ -164,32 +152,30 @@ export const usePosterStore = create((set, get) => ({
     set({ snapshots: get().snapshots.filter(s => s.id !== id) })
   },
 
-  // Smart filename helper
   getSmartFilename: (ext) => {
     const state = get()
     const name = state.fullName?.trim()
     if (name) {
-      return `${name.replace(/\s+/g, '-')}-Obituary-Poster.${ext}`
+      return `${name.replace(/\s+/g, '-')}-Programme-Booklet.${ext}`
     }
-    return `Obituary-Poster.${ext}`
+    return `Programme-Booklet.${ext}`
   },
 
-  // Save / Load
-  savePoster: () => {
+  saveBooklet: () => {
     const state = get()
     let id = state.currentId
     if (!id) {
-      id = `poster-${Date.now()}`
+      id = `booklet-${Date.now()}`
       set({ currentId: id })
     }
     const data = extractData(state)
     saveToStorage(id, data)
 
-    const list = loadPostersList()
+    const list = loadBookletsList()
     const existing = list.findIndex((p) => p.id === id)
     const entry = {
       id,
-      name: `${state.headerTitle} ${state.fullName}`.trim(),
+      name: `Booklet ${state.fullName}`.trim(),
       updatedAt: new Date().toISOString(),
     }
     if (existing >= 0) {
@@ -197,34 +183,34 @@ export const usePosterStore = create((set, get) => ({
     } else {
       list.push(entry)
     }
-    savePostersList(list)
-    set({ isDirty: false, postersList: list, editCountSinceLastSave: 0, lastAutoSaveAt: new Date().toISOString() })
+    saveBookletsList(list)
+    set({ isDirty: false, bookletsList: list, editCountSinceLastSave: 0, lastAutoSaveAt: new Date().toISOString() })
 
     if (useAuthStore.getState().isLoggedIn()) {
-      syncDesign('poster', id, data, entry.name, entry.updatedAt)
+      syncDesign('booklet', id, data, entry.name, entry.updatedAt)
     }
 
     return id
   },
 
-  loadPoster: (id) => {
+  loadBooklet: (id) => {
     const data = loadFromStorage(id)
     if (data) {
       set({ ...data, currentId: id, isDirty: false, history: [], historyIndex: -1 })
     }
   },
 
-  deletePoster: (id) => {
+  deleteBooklet: (id) => {
     try { localStorage.removeItem(`${STORAGE_KEY}-${id}`) } catch { /* ignore */ }
-    const list = loadPostersList().filter((p) => p.id !== id)
-    savePostersList(list)
-    set({ postersList: list })
+    const list = loadBookletsList().filter((p) => p.id !== id)
+    saveBookletsList(list)
+    set({ bookletsList: list })
     deleteDesignFromCloud(id)
   },
 
-  newPoster: () => {
+  newBooklet: () => {
     set({
-      ...posterDefaultData,
+      ...bookletDefaultData,
       currentId: null,
       isDirty: false,
       history: [],
@@ -236,17 +222,17 @@ export const usePosterStore = create((set, get) => ({
 
   loadFromCloudData: (id, data, name) => {
     saveToStorage(id, data)
-    const list = loadPostersList()
+    const list = loadBookletsList()
     if (!list.find((p) => p.id === id)) {
       list.push({ id, name, updatedAt: new Date().toISOString() })
+      saveBookletsList(list)
     }
-    savePostersList(list)
-    set({ ...data, currentId: id, isDirty: false, postersList: list, history: [], historyIndex: -1 })
+    set({ ...data, currentId: id, isDirty: false, bookletsList: list, history: [], historyIndex: -1 })
   },
 
   loadTemplate: (data) => {
     set({
-      ...posterDefaultData,
+      ...bookletDefaultData,
       ...data,
       currentId: null,
       isDirty: false,
@@ -257,7 +243,6 @@ export const usePosterStore = create((set, get) => ({
     })
   },
 
-  // Export/Import JSON
   exportJSON: () => {
     const data = extractData(get())
     return JSON.stringify(data, null, 2)
@@ -279,12 +264,12 @@ export const usePosterStore = create((set, get) => ({
 
 function extractData(state) {
   const {
-    currentId, isDirty, history, historyIndex, postersList,
+    currentId, isDirty, history, historyIndex, bookletsList,
     editCountSinceLastSave, lastAutoSaveAt, snapshots,
-    _pushHistory, updateField, updateNested,
-    updateFuneralArrangement, addFuneralArrangement, removeFuneralArrangement,
+    _pushHistory, updateField, updateServiceItem, addServiceItem, removeServiceItem,
+    toggleHymn,
     undo, redo, canUndo, canRedo,
-    savePoster, loadPoster, deletePoster, newPoster, loadFromCloudData, loadTemplate,
+    saveBooklet, loadBooklet, deleteBooklet, newBooklet, loadFromCloudData, loadTemplate,
     exportJSON, importJSON, applyImport,
     createSnapshot, restoreSnapshot, deleteSnapshot,
     getSmartFilename,

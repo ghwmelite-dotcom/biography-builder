@@ -1,0 +1,16 @@
+name = "funeralpress-auth-api"
+main = "auth-api.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+GOOGLE_CLIENT_ID = "820118502550-4cju49bcbn2btvr3d31k5cpgdefpv0j1.apps.googleusercontent.com"
+CORS_ORIGIN = "https://funeral-brochure-app.pages.dev"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "funeralpress-db"
+database_id = "eab2488e-18cd-4920-adf8-7db724facee5"
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "funeralpress-images"

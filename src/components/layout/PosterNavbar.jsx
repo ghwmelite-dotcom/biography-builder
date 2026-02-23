@@ -2,6 +2,9 @@ import { Link, useLocation } from 'react-router-dom'
 import { FileText, Undo2, Redo2, Save, Download, Upload, History, Sun, Moon } from 'lucide-react'
 import { usePosterStore } from '../../stores/posterStore'
 import { useThemeStore } from '../../stores/themeStore'
+import { useAuthStore } from '../../stores/authStore'
+import GoogleLoginButton from '../auth/GoogleLoginButton'
+import UserMenu from '../auth/UserMenu'
 import { useNotification } from '../ui/notification'
 import { useRef, useState, useEffect } from 'react'
 import PosterVersionsDialog from './PosterVersionsDialog'
@@ -11,6 +14,7 @@ export default function PosterNavbar() {
   const location = useLocation()
   const store = usePosterStore()
   const { theme, toggleTheme } = useThemeStore()
+  const user = useAuthStore((s) => s.user)
   const { notify } = useNotification()
   const fileInputRef = useRef(null)
   const isEditor = location.pathname.startsWith('/poster')
@@ -168,13 +172,16 @@ export default function PosterNavbar() {
           </div>
         )}
 
-        <button
-          onClick={toggleTheme}
-          className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
+        <div className="flex items-center gap-1.5">
+          {user ? <UserMenu /> : <GoogleLoginButton compact />}
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        </div>
       </nav>
 
       {/* Dialogs */}

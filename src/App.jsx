@@ -5,6 +5,8 @@ import LandingPage from './pages/LandingPage'
 import { NotificationProvider } from './components/ui/notification'
 import { Skeleton } from './components/ui/skeleton'
 import { useThemeStore } from './stores/themeStore'
+import { useAuthStore } from './stores/authStore'
+import { useGoogleOneTap } from './hooks/useGoogleOneTap'
 
 const EditorPage = lazy(() => import('./pages/EditorPage'))
 const PreviewPage = lazy(() => import('./pages/PreviewPage'))
@@ -14,6 +16,14 @@ const ProgrammePage = lazy(() => import('./pages/ProgrammePage'))
 const MemorialPage = lazy(() => import('./pages/MemorialPage'))
 const FlipbookPage = lazy(() => import('./pages/FlipbookPage'))
 const MemorialSlideshowPage = lazy(() => import('./pages/MemorialSlideshowPage'))
+const InvitationEditorPage = lazy(() => import('./pages/InvitationEditorPage'))
+const ThankYouEditorPage = lazy(() => import('./pages/ThankYouEditorPage'))
+const BookletEditorPage = lazy(() => import('./pages/BookletEditorPage'))
+const BannerEditorPage = lazy(() => import('./pages/BannerEditorPage'))
+const BudgetPlannerPage = lazy(() => import('./pages/BudgetPlannerPage'))
+const CollageMakerPage = lazy(() => import('./pages/CollageMakerPage'))
+const ReminderPage = lazy(() => import('./pages/ReminderPage'))
+const MyDesignsPage = lazy(() => import('./pages/MyDesignsPage'))
 
 function LoadingFallback() {
   return (
@@ -38,6 +48,14 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
 
+  // Hydrate auth state from localStorage on app start
+  useEffect(() => {
+    useAuthStore.getState().hydrate()
+  }, [])
+
+  // Initialize Google One Tap
+  useGoogleOneTap()
+
   return (
     <ErrorBoundary>
       <NotificationProvider>
@@ -53,6 +71,14 @@ export default function App() {
               <Route path="/memorial/:id" element={<MemorialPage />} />
               <Route path="/flipbook" element={<FlipbookPage />} />
               <Route path="/slideshow" element={<MemorialSlideshowPage />} />
+              <Route path="/invitation-editor" element={<InvitationEditorPage />} />
+              <Route path="/thankyou-editor" element={<ThankYouEditorPage />} />
+              <Route path="/booklet-editor" element={<BookletEditorPage />} />
+              <Route path="/banner-editor" element={<BannerEditorPage />} />
+              <Route path="/budget-planner" element={<BudgetPlannerPage />} />
+              <Route path="/collage-maker" element={<CollageMakerPage />} />
+              <Route path="/reminders" element={<ReminderPage />} />
+              <Route path="/my-designs" element={<MyDesignsPage />} />
             </Routes>
           </Suspense>
         </BrowserRouter>

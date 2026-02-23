@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { defaultData } from '../utils/defaultData'
+import { syncDesign, deleteDesignFromCloud } from '../utils/syncEngine'
+import { useAuthStore } from './authStore'
 
 const STORAGE_KEY = 'funeral-brochure-data'
 const BROCHURES_KEY = 'funeral-brochures-list'
@@ -386,6 +388,12 @@ export const useBrochureStore = create((set, get) => ({
     }
     saveBrochuresList(list)
     set({ isDirty: false, brochuresList: list, editCountSinceLastSave: 0, lastAutoSaveAt: new Date().toISOString() })
+
+    // Cloud sync
+    if (useAuthStore.getState().isLoggedIn()) {
+      syncDesign('brochure', id, data, entry.name, entry.updatedAt)
+    }
+
     return id
   },
 
@@ -402,6 +410,7 @@ export const useBrochureStore = create((set, get) => ({
     const list = loadBrochuresList().filter((b) => b.id !== id)
     saveBrochuresList(list)
     set({ brochuresList: list })
+    deleteDesignFromCloud(id)
   },
 
   newBrochure: () => {
@@ -415,6 +424,17 @@ export const useBrochureStore = create((set, get) => ({
       editCountSinceLastSave: 0,
       lastAutoSaveAt: null,
     })
+  },
+
+  loadFromCloudData: (id, data, name) => {
+    saveToStorage(id, data)
+    setActiveId(id)
+    const list = loadBrochuresList()
+    if (!list.find((b) => b.id === id)) {
+      list.push({ id, name, updatedAt: new Date().toISOString() })
+    }
+    saveBrochuresList(list)
+    set({ ...data, currentId: id, isDirty: false, brochuresList: list, history: [], historyIndex: -1 })
   },
 
   // Export/Import JSON
@@ -448,7 +468,7 @@ function extractData(state) {
     updateGalleryPhoto, addGalleryPhoto, removeGalleryPhoto,
     updateBiographyPhoto, updateBiographyCaption,
     undo, redo, canUndo, canRedo,
-    saveBrochure, loadBrochure, deleteBrochure, newBrochure,
+    saveBrochure, loadBrochure, deleteBrochure, newBrochure, loadFromCloudData,
     exportJSON, importJSON, applyImport,
     createSnapshot, restoreSnapshot, deleteSnapshot,
     getSmartFilename, loadTemplate,
