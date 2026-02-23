@@ -513,19 +513,15 @@ export default function LandingPage() {
                       View Partner Dashboard
                       <ChevronRight size={14} />
                     </button>
+                  ) : user ? (
+                    <p className="text-sm text-muted-foreground italic">
+                      Interested? Contact us to join the partner program.
+                    </p>
                   ) : (
-                    <button
-                      onClick={() => {
-                        if (window.google?.accounts?.id) {
-                          window.google.accounts.id.prompt()
-                        }
-                      }}
-                      className="inline-flex items-center gap-2 px-7 py-3 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-all text-sm shadow-lg shadow-primary/20 hover:shadow-primary/30"
-                    >
-                      <Users size={16} />
-                      Apply to Become a Partner
-                      <ChevronRight size={14} />
-                    </button>
+                    <div className="flex flex-col items-center lg:items-start gap-2">
+                      <p className="text-xs text-muted-foreground">Sign in to get started</p>
+                      <GoogleLoginButton />
+                    </div>
                   )}
                 </div>
 
