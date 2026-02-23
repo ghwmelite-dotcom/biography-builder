@@ -32,6 +32,10 @@ import {
   Gift,
   Cloud,
   Loader2,
+  TrendingUp,
+  Banknote,
+  ChevronRight,
+  Users,
 } from 'lucide-react'
 import { Sun, Moon } from 'lucide-react'
 import { useBrochureStore } from '../stores/brochureStore'
@@ -428,6 +432,141 @@ export default function LandingPage() {
           <div className="flex-shrink-0 w-full max-w-[280px] lg:max-w-[300px]">
             <div className="rounded-xl overflow-hidden shadow-2xl shadow-primary/10 ring-1 ring-border">
               <BrochureMockup themeKey="blackGold" className="text-[10px]" />
+            </div>
+          </div>
+        </div>
+
+        {/* ═══ Partner Program Highlight ═══ */}
+        <div className="relative mb-20 group/partner">
+          {/* Outer glow ring on hover */}
+          <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-primary/40 via-amber-500/40 to-primary/40 opacity-0 group-hover/partner:opacity-100 blur-sm transition-opacity duration-700" />
+
+          <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card">
+            {/* Background decorations */}
+            <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-primary/8 to-transparent rounded-full -translate-y-1/3 translate-x-1/4" />
+            <div className="absolute bottom-0 left-0 w-60 h-60 bg-gradient-to-tr from-amber-500/6 to-transparent rounded-full translate-y-1/3 -translate-x-1/4" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-gradient-radial from-primary/3 to-transparent rounded-full" />
+
+            {/* Subtle grid pattern */}
+            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+
+            <div className="relative px-8 py-10 md:px-12 md:py-14">
+              {/* Top badge */}
+              <div className="flex items-center justify-center md:justify-start mb-6">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-gradient-to-r from-primary/15 to-amber-500/15 border border-primary/20 rounded-full">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] text-primary uppercase tracking-[0.15em] font-bold">Partner Program</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col lg:flex-row items-center gap-10">
+                {/* Left: content */}
+                <div className="flex-1 text-center lg:text-left">
+                  <h2
+                    className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4 leading-tight"
+                    style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+                  >
+                    Earn Up to{' '}
+                    <span className="relative inline-block">
+                      <span className="relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-primary to-amber-500">40% Commission</span>
+                      <span className="absolute bottom-0 left-0 w-full h-[3px] bg-gradient-to-r from-primary/40 to-amber-500/40 rounded-full" />
+                    </span>
+                  </h2>
+
+                  <p className="text-muted-foreground text-sm sm:text-base max-w-xl mb-8 leading-relaxed">
+                    Join our partner program and earn money by referring families to FuneralPress.
+                    Share your unique referral link, and get paid for every design they purchase.
+                  </p>
+
+                  {/* Stat pills */}
+                  <div className="flex flex-wrap items-center gap-3 justify-center lg:justify-start mb-8">
+                    <div className="flex items-center gap-2.5 px-4 py-2.5 bg-muted/60 border border-border rounded-xl">
+                      <TrendingUp size={16} className="text-primary shrink-0" />
+                      <div>
+                        <p className="text-base font-bold text-foreground leading-none">30–40%</p>
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-wider mt-0.5">Commission Rate</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5 px-4 py-2.5 bg-muted/60 border border-border rounded-xl">
+                      <Banknote size={16} className="text-emerald-500 shrink-0" />
+                      <div>
+                        <p className="text-base font-bold text-foreground leading-none">GHS 19+</p>
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-wider mt-0.5">Per Referral Sale</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5 px-4 py-2.5 bg-muted/60 border border-border rounded-xl">
+                      <Users size={16} className="text-amber-500 shrink-0" />
+                      <div>
+                        <p className="text-base font-bold text-foreground leading-none">4 Tiers</p>
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-wider mt-0.5">Unlock Higher %</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CTA */}
+                  {user?.isPartner ? (
+                    <button
+                      onClick={() => navigate('/partner-dashboard')}
+                      className="inline-flex items-center gap-2 px-7 py-3 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-all text-sm shadow-lg shadow-primary/20 hover:shadow-primary/30"
+                    >
+                      <Users size={16} />
+                      View Partner Dashboard
+                      <ChevronRight size={14} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        if (window.google?.accounts?.id) {
+                          window.google.accounts.id.prompt()
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 px-7 py-3 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-all text-sm shadow-lg shadow-primary/20 hover:shadow-primary/30"
+                    >
+                      <Users size={16} />
+                      Apply to Become a Partner
+                      <ChevronRight size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Right: Tier visualization */}
+                <div className="shrink-0 hidden lg:flex flex-col gap-2.5 w-56">
+                  {[
+                    { name: 'Starter', range: '0–5 referrals', rate: '30%', color: 'from-zinc-400 to-zinc-500', bg: 'bg-zinc-400/10', border: 'border-zinc-400/20', width: 'w-[60%]' },
+                    { name: 'Growing', range: '6–20 referrals', rate: '33%', color: 'from-blue-400 to-blue-500', bg: 'bg-blue-400/10', border: 'border-blue-400/20', width: 'w-[72%]' },
+                    { name: 'Pro', range: '21–50 referrals', rate: '37%', color: 'from-amber-400 to-amber-500', bg: 'bg-amber-400/10', border: 'border-amber-400/20', width: 'w-[86%]' },
+                    { name: 'Elite', range: '51+ referrals', rate: '40%', color: 'from-purple-400 to-purple-500', bg: 'bg-purple-400/10', border: 'border-purple-400/20', width: 'w-full' },
+                  ].map((tier, i) => (
+                    <div key={tier.name} className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${tier.bg} ${tier.border} transition-all duration-300`} style={{ animationDelay: `${i * 100}ms` }}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-semibold text-foreground">{tier.name}</span>
+                          <span className={`text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r ${tier.color}`}>{tier.rate}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full bg-gradient-to-r ${tier.color} ${tier.width} transition-all duration-700`} />
+                        </div>
+                        <p className="text-[9px] text-muted-foreground mt-1">{tier.range}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bottom perks strip */}
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 mt-8 pt-6 border-t border-border/50">
+                {[
+                  'Unique referral link',
+                  'Real-time tracking',
+                  'Monthly MoMo payouts',
+                  'Dedicated support',
+                ].map((perk) => (
+                  <span key={perk} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="w-1 h-1 rounded-full bg-primary/60" />
+                    {perk}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
