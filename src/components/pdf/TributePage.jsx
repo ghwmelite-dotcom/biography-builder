@@ -64,27 +64,35 @@ export default function TributePages({ tribute, theme, startPageNum }) {
             )}
 
             {/* Tribute photos */}
-            {tribute.photos && tribute.photos.some(Boolean) && (
-              <View style={{
-                flexDirection: 'row', justifyContent: 'center',
-                marginTop: 12,
-              }}>
-                {tribute.photos.map((photo, i) =>
-                  photo ? (
-                    <View key={i} style={{ alignItems: 'center', marginHorizontal: 5 }}>
-                      <Image src={photo} style={{
-                        width: 120, height: 90, objectFit: 'cover',
-                        objectPosition: 'center top',
-                        borderWidth: 1, borderColor: theme.border, borderRadius: 3,
-                      }} />
-                      {tribute.photoCaptions && tribute.photoCaptions[i] && (
-                        <Text style={s.photoCaption}>{tribute.photoCaptions[i]}</Text>
+            {tribute.photos && tribute.photos.some(Boolean) && (() => {
+              const validPhotos = tribute.photos.map((photo, i) => photo ? { photo, index: i } : null).filter(Boolean)
+              const count = validPhotos.length
+              const photoWidth = count === 1 ? 220 : count === 2 ? 180 : 140
+              const photoHeight = count === 1 ? 180 : count === 2 ? 140 : 110
+              return (
+                <View style={{
+                  flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start',
+                  flexWrap: 'wrap', marginTop: 14, gap: 10,
+                }}>
+                  {validPhotos.map(({ photo, index }) => (
+                    <View key={index} style={{ alignItems: 'center', maxWidth: photoWidth + 10 }}>
+                      <View style={{
+                        width: photoWidth, height: photoHeight,
+                        borderWidth: 1.5, borderColor: theme.border, borderRadius: 4,
+                        overflow: 'hidden',
+                      }}>
+                        <Image src={photo} style={{
+                          width: '100%', height: '100%', objectFit: 'contain',
+                        }} />
+                      </View>
+                      {tribute.photoCaptions && tribute.photoCaptions[index] && (
+                        <Text style={[s.photoCaption, { marginTop: 3 }]}>{tribute.photoCaptions[index]}</Text>
                       )}
                     </View>
-                  ) : null
-                )}
-              </View>
-            )}
+                  ))}
+                </View>
+              )
+            })()}
           </>
         )}
       </View>
