@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { QrCode, Receipt, ChevronDown, ChevronRight, Globe, Radio, ExternalLink, Download, Loader2, Upload, X } from 'lucide-react'
+import { QrCode, Receipt, ChevronDown, ChevronRight, Globe, Radio, ExternalLink, Download, Loader2, Upload, X, Flower2, Plus, Trash2 } from 'lucide-react'
 import { useBrochureStore } from '../../stores/brochureStore'
 import { downloadCardAsPdf } from '../../utils/downloadQrPdf'
 
@@ -91,6 +91,138 @@ function FullQRCard({ type, qrDataUrl, displayName, lifeSpan, funeralVenue, url 
   )
 }
 
+/* Mini wreath card preview for the editor */
+function MiniWreathPreview({ message, from }) {
+  return (
+    <div style={{
+      width: '100%', aspectRatio: '5/3', background: CREAM, position: 'relative',
+      overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', fontFamily: "'Playfair Display', Georgia, serif",
+      padding: '8px 6px', border: `1px solid ${GOLD}`, borderRadius: '6px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '3px' }}>
+        <div style={{ width: '16px', height: '0.5px', background: GOLD }} />
+        <span style={{ color: GOLD, fontSize: '7px' }}>&#10013;</span>
+        <div style={{ width: '16px', height: '0.5px', background: GOLD }} />
+      </div>
+      <p style={{ fontSize: '9px', color: BLACK, fontWeight: 600, fontStyle: 'italic', textAlign: 'center', lineHeight: 1.2, margin: '2px 0' }}>
+        {message || 'Message'}
+      </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', margin: '2px 0' }}>
+        <div style={{ width: '12px', height: '0.5px', background: GOLD }} />
+        <span style={{ color: GOLD, fontSize: '5px' }}>&#10022;</span>
+        <div style={{ width: '12px', height: '0.5px', background: GOLD }} />
+      </div>
+      <p style={{ fontSize: '6px', color: '#777', textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'system-ui, sans-serif' }}>
+        — {from || 'From'} —
+      </p>
+    </div>
+  )
+}
+
+function WreathCardsSection({ open, onToggle }) {
+  const store = useBrochureStore()
+  const wreathCards = store.wreathCards || []
+
+  const updateCard = (index, field, value) => {
+    const updated = [...wreathCards]
+    updated[index] = { ...updated[index], [field]: value }
+    store.updateField('wreathCards', updated)
+  }
+
+  const addCard = () => {
+    store.updateField('wreathCards', [...wreathCards, { message: '', from: '' }])
+  }
+
+  const removeCard = (index) => {
+    store.updateField('wreathCards', wreathCards.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div className="border border-border/50 rounded-lg overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-card/50 transition-colors"
+      >
+        <Flower2 size={14} className="text-primary shrink-0" />
+        <span className="text-xs font-medium text-card-foreground flex-1">Wreath Cards</span>
+        <span className="text-[10px] text-muted-foreground mr-1">{wreathCards.length}</span>
+        {open ? <ChevronDown size={12} className="text-muted-foreground" /> : <ChevronRight size={12} className="text-muted-foreground" />}
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3 border-t border-border/30 space-y-3 pt-3">
+          <p className="text-[10px] text-muted-foreground">
+            Create message cards for funeral wreaths. Each card prints on its own A4 page.
+          </p>
+
+          {wreathCards.map((card, i) => (
+            <div key={i} className="border border-border/40 rounded-lg p-2 space-y-2">
+              <div className="flex items-start gap-2">
+                {/* Mini preview */}
+                <div className="w-20 shrink-0">
+                  <MiniWreathPreview message={card.message} from={card.from} />
+                </div>
+
+                {/* Editable fields */}
+                <div className="flex-1 space-y-1.5">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground mb-0.5 block">Message</label>
+                    <input
+                      type="text"
+                      value={card.message}
+                      onChange={(e) => updateCard(i, 'message', e.target.value)}
+                      placeholder="e.g. Rest In Peace"
+                      className="w-full bg-card border border-input rounded-md px-2 py-1 text-xs text-card-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground mb-0.5 block">From</label>
+                    <input
+                      type="text"
+                      value={card.from}
+                      onChange={(e) => updateCard(i, 'from', e.target.value)}
+                      placeholder="e.g. The Family"
+                      className="w-full bg-card border border-input rounded-md px-2 py-1 text-xs text-card-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+
+                {/* Delete button */}
+                {wreathCards.length > 1 && (
+                  <button
+                    onClick={() => removeCard(i)}
+                    className="mt-1 p-1 text-muted-foreground hover:text-destructive transition-colors"
+                    title="Remove card"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Add card */}
+          <button
+            onClick={addCard}
+            className="w-full flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] border border-dashed border-input rounded-md text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+          >
+            <Plus size={10} /> Add Wreath Card
+          </button>
+
+          {/* Open full page */}
+          <Link
+            to="/wreath-cards"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-colors"
+          >
+            <ExternalLink size={12} /> Open Wreath Cards Page
+          </Link>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PrintMaterialsForm({ onOpenPublish, onOpenLiveService }) {
   const store = useBrochureStore()
   const { fullName, title, dateOfBirth, dateOfDeath, funeralVenue, familySignature, coverPhoto,
@@ -98,6 +230,7 @@ export default function PrintMaterialsForm({ onOpenPublish, onOpenLiveService })
 
   const [qrOpen, setQrOpen] = useState(true)
   const [receiptOpen, setReceiptOpen] = useState(false)
+  const [wreathOpen, setWreathOpen] = useState(false)
   const [downloading, setDownloading] = useState(null)
 
   // Receipt state
@@ -370,6 +503,9 @@ export default function PrintMaterialsForm({ onOpenPublish, onOpenLiveService })
           </div>
         )}
       </div>
+
+      {/* ── Wreath Cards ── */}
+      <WreathCardsSection open={wreathOpen} onToggle={() => setWreathOpen(!wreathOpen)} />
 
       {/* Hidden full-size QR cards for PDF capture */}
       {memorialUrl && memorialQrCode && (

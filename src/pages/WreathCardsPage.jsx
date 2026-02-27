@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Printer, ArrowLeft, Download, Loader2 } from 'lucide-react'
+import { useBrochureStore } from '../stores/brochureStore'
 import { downloadCardAsPdf } from '../utils/downloadQrPdf'
 
 function usePortraitPrint() {
@@ -18,19 +19,10 @@ const DARK_GOLD = '#A6882F'
 const BLACK = '#1A1A1A'
 const CREAM = '#FDF8F0'
 
-const cards = [
-  {
-    message: 'Farewell Aunty Joe!',
-    from: 'Children & Grandchildren',
-  },
-  {
-    message: 'Xedenyuie Sister Worla',
-    from: 'Family',
-  },
-  {
-    message: 'Rest Well!',
-    from: 'Friends & Colleagues',
-  },
+const defaultCards = [
+  { message: 'Rest In Peace', from: 'Family' },
+  { message: 'Gone But Not Forgotten', from: 'Friends' },
+  { message: 'Forever In Our Hearts', from: 'Colleagues' },
 ]
 
 function WreathCard({ message, from }) {
@@ -168,6 +160,9 @@ function Corner({ pos }) {
 export default function WreathCardsPage() {
   usePortraitPrint()
 
+  const storeCards = useBrochureStore((s) => s.wreathCards)
+  const cards = storeCards && storeCards.length > 0 ? storeCards : defaultCards
+
   const cardRefs = useRef([])
   const [downloading, setDownloading] = useState(null)
 
@@ -181,7 +176,7 @@ export default function WreathCardsPage() {
     } finally {
       setDownloading(null)
     }
-  }, [])
+  }, [cards])
 
   return (
     <div className="min-h-screen bg-background">

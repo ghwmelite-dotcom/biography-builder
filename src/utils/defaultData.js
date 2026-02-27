@@ -187,4 +187,9 @@ export const defaultData = {
   memorialQrCode: null,
   liveServiceId: null,
   liveServiceQrCode: null,
+  wreathCards: [
+    { message: 'Farewell Aunty Joe!', from: 'Children & Grandchildren' },
+    { message: 'Xedenyuie Sister Worla', from: 'Family' },
+    { message: 'Rest Well!', from: 'Friends & Colleagues' },
+  ],
 }
