@@ -233,6 +233,15 @@
     page-break-after: auto;
     break-after: auto;
   }
+
+  .wreath-print-page {
+    page-break-after: always;
+    break-after: page;
+  }
+  .wreath-print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
 }
 
 /* Default page size — overridden per page via inline styles */

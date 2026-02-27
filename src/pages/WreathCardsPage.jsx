@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Printer, ArrowLeft } from 'lucide-react'
+import { Printer, ArrowLeft, Download, Loader2 } from 'lucide-react'
+import { downloadCardAsPdf } from '../utils/downloadQrPdf'
 
 function usePortraitPrint() {
   useEffect(() => {
@@ -167,6 +168,21 @@ function Corner({ pos }) {
 export default function WreathCardsPage() {
   usePortraitPrint()
 
+  const cardRefs = useRef([])
+  const [downloading, setDownloading] = useState(null)
+
+  const handleDownload = useCallback(async (index) => {
+    const el = cardRefs.current[index]
+    if (!el) return
+    setDownloading(index)
+    try {
+      const label = cards[index].from.replace(/\s+/g, '-')
+      await downloadCardAsPdf(el, `Wreath-Card-${label}.pdf`)
+    } finally {
+      setDownloading(null)
+    }
+  }, [])
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header — hidden when printing */}
@@ -179,7 +195,7 @@ export default function WreathCardsPage() {
             <h1 className="text-lg font-semibold tracking-tight">Wreath Cards</h1>
           </div>
           <Button size="sm" onClick={() => window.print()}>
-            <Printer className="w-3.5 h-3.5 mr-1" /> Print Cards
+            <Printer className="w-3.5 h-3.5 mr-1" /> Print All
           </Button>
         </div>
       </header>
@@ -187,25 +203,54 @@ export default function WreathCardsPage() {
       {/* Screen preview */}
       <div className="print:hidden max-w-xl mx-auto px-4 pb-16 space-y-6">
         <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium pt-6">
-          Preview — all three cards print on one page
+          Preview — each card prints on its own full page
         </p>
         {cards.map((card, i) => (
-          <div key={i} className="rounded-xl shadow-xl overflow-hidden border border-border">
-            <WreathCard {...card} />
+          <div key={i} className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-foreground">{card.from}</p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleDownload(i)}
+                disabled={downloading === i}
+              >
+                {downloading === i
+                  ? <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Generating...</>
+                  : <><Download className="w-3.5 h-3.5 mr-1" /> Download PDF</>
+                }
+              </Button>
+            </div>
+            <div className="rounded-xl shadow-xl overflow-hidden border border-border">
+              <WreathCard {...card} />
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Print area — all three cards on one A4 page */}
-      <div className="hidden print:flex print:flex-col print:items-center print:justify-center print:min-h-screen print:gap-4 print:py-8 print:px-12"
-        style={{ background: '#fff' }}
-      >
+      {/* Print area — each card on its own page */}
+      <div className="hidden print:block">
         {cards.map((card, i) => (
-          <div key={i} style={{ width: '100%', maxWidth: '520px' }}>
-            <WreathCard {...card} />
+          <div key={i} className="wreath-print-page flex items-center justify-center" style={{ minHeight: '100vh', background: '#fff', padding: '40px' }}>
+            <div style={{ width: '100%', maxWidth: '600px' }}>
+              <WreathCard {...card} />
+            </div>
           </div>
         ))}
       </div>
+
+      {/* Hidden full-size cards for PDF capture */}
+      {cards.map((card, i) => (
+        <div
+          key={`capture-${i}`}
+          ref={(el) => { cardRefs.current[i] = el }}
+          style={{ position: 'fixed', left: '-9999px', top: 0, width: '794px', height: '1123px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: CREAM, padding: '60px' }}
+        >
+          <div style={{ width: '100%' }}>
+            <WreathCard {...card} />
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
