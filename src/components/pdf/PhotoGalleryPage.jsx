@@ -52,7 +52,7 @@ export default function PhotoGalleryPages({ data, theme, startPageNum }) {
               }}>
                 {photo.src ? (
                   <Image src={photo.src} style={{
-                    width: '100%', height: '100%', objectFit: 'cover',
+                    width: '100%', height: '100%', objectFit: 'contain',
                   }} />
                 ) : (
                   <View style={[s.photoPlaceholder, {

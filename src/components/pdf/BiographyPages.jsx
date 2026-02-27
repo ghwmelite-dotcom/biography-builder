@@ -42,27 +42,35 @@ export default function BiographyPages({ data, theme, startPageNum }) {
           ))}
 
           {/* Show biography photos on first page */}
-          {idx === 0 && data.biographyPhotos && data.biographyPhotos.some(Boolean) && (
-            <View style={{
-              flexDirection: 'row', justifyContent: 'center',
-              marginTop: 12,
-            }}>
-              {data.biographyPhotos.map((photo, i) =>
-                photo ? (
-                  <View key={i} style={{ alignItems: 'center', marginHorizontal: 5 }}>
-                    <Image src={photo} style={{
-                      width: 120, height: 90, objectFit: 'cover',
-                      objectPosition: 'center top',
-                      borderWidth: 1, borderColor: theme.border, borderRadius: 3,
-                    }} />
-                    {data.biographyPhotoCaptions[i] && (
-                      <Text style={s.photoCaption}>{data.biographyPhotoCaptions[i]}</Text>
+          {idx === 0 && data.biographyPhotos && data.biographyPhotos.some(Boolean) && (() => {
+            const validPhotos = data.biographyPhotos.map((photo, i) => photo ? { photo, index: i } : null).filter(Boolean)
+            const count = validPhotos.length
+            const photoWidth = count === 1 ? 220 : count === 2 ? 180 : 140
+            const photoHeight = count === 1 ? 180 : count === 2 ? 140 : 110
+            return (
+              <View style={{
+                flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start',
+                flexWrap: 'wrap', marginTop: 14, gap: 10,
+              }}>
+                {validPhotos.map(({ photo, index }) => (
+                  <View key={index} style={{ alignItems: 'center', maxWidth: photoWidth + 10 }}>
+                    <View style={{
+                      width: photoWidth, height: photoHeight,
+                      borderWidth: 1.5, borderColor: theme.border, borderRadius: 4,
+                      overflow: 'hidden',
+                    }}>
+                      <Image src={photo} style={{
+                        width: '100%', height: '100%', objectFit: 'contain',
+                      }} />
+                    </View>
+                    {data.biographyPhotoCaptions && data.biographyPhotoCaptions[index] && (
+                      <Text style={[s.photoCaption, { marginTop: 3 }]}>{data.biographyPhotoCaptions[index]}</Text>
                     )}
                   </View>
-                ) : null
-              )}
-            </View>
-          )}
+                ))}
+              </View>
+            )
+          })()}
 
           {/* Closing verse on last page */}
           {idx === pages.length - 1 && (
