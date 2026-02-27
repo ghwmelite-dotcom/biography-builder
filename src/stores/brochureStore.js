@@ -36,6 +36,18 @@ function migrateOrderOfService(data) {
   )) {
     data.orderOfService = { ...data.orderOfService, churchService: defaultOrderOfService.churchService }
   }
+  // Migrate old order: Offertory was before Sermon, now Sermon comes first
+  if (church && church.length > 0) {
+    const offIdx = church.findIndex(item => /Offertory.*Song II/i.test(item.description))
+    const sermonIdx = church.findIndex(item => /^Sermon$/i.test(item.description))
+    if (offIdx !== -1 && sermonIdx !== -1 && offIdx < sermonIdx) {
+      const items = [...church]
+      const [offertory] = items.splice(offIdx, 1)
+      // Insert offertory after the sermon (sermon shifted left by 1 after removal)
+      items.splice(sermonIdx, 0, offertory)
+      data.orderOfService = { ...data.orderOfService, churchService: items }
+    }
+  }
   // Migrate privateBurial if still generic
   const burial = data.orderOfService.privateBurial
   if (burial && burial.length > 0 && !burial[0].time && /Delegation Departs with Body$/i.test(burial[0].description)) {
@@ -231,6 +243,16 @@ export const useBrochureStore = create((set, get) => ({
       tributes: state.tributes.filter((_, i) => i !== index),
       isDirty: true,
     })
+  },
+
+  moveTribute: (from, to) => {
+    const state = get()
+    if (to < 0 || to >= state.tributes.length) return
+    state._pushHistory()
+    const tributes = [...state.tributes]
+    const [moved] = tributes.splice(from, 1)
+    tributes.splice(to, 0, moved)
+    set({ tributes, isDirty: true })
   },
 
   // Update officials
@@ -481,7 +503,7 @@ function extractData(state) {
     editCountSinceLastSave, lastAutoSaveAt, snapshots,
     _pushHistory, updateField, updateNested, updateServiceItem,
     addServiceItem, removeServiceItem, moveServiceItem,
-    updateTribute, updateTributePhoto, updateTributeCaption, addTribute, removeTribute,
+    updateTribute, updateTributePhoto, updateTributeCaption, addTribute, removeTribute, moveTribute,
     updateOfficial, addOfficial, removeOfficial,
     updateGalleryPhoto, addGalleryPhoto, removeGalleryPhoto,
     updateBiographyPhoto, updateBiographyCaption,

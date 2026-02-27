@@ -30,6 +30,8 @@ const MyDesignsPage = lazy(() => import('./pages/MyDesignsPage'))
 const PartnerDashboardPage = lazy(() => import('./pages/PartnerDashboardPage'))
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'))
 const LiveServicePage = lazy(() => import('./pages/LiveServicePage'))
+const ReceiptPage = lazy(() => import('./pages/ReceiptPage'))
+const QRCodePrintPage = lazy(() => import('./pages/QRCodePrintPage'))
 
 function LoadingFallback() {
   return (
@@ -95,6 +97,8 @@ export default function App() {
               <Route path="/partner-dashboard" element={<PartnerDashboardPage />} />
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/live-service/:id" element={<LiveServicePage />} />
+              <Route path="/receipt" element={<ReceiptPage />} />
+              <Route path="/qr-cards" element={<QRCodePrintPage />} />
             </Routes>
           </Suspense>
         </BrowserRouter>

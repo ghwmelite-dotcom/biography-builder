@@ -1,5 +1,5 @@
 import { useBrochureStore } from '../../stores/brochureStore'
-import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, BookOpen, Sparkles } from 'lucide-react'
+import { Plus, Trash2, ChevronDown, ChevronRight, ChevronUp, Lightbulb, BookOpen, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { tributeTemplates } from '../../utils/templates'
 import { tributeWritingGuides } from '../../utils/writingPrompts'
@@ -67,16 +67,42 @@ export default function TributesForm() {
                 {tribute.title || `Tribute ${i + 1}`}
               </span>
             </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                if (confirm('Remove this tribute section?')) store.removeTribute(i)
-              }}
-              className="p-1 text-muted-foreground/60 hover:text-red-400 transition-colors"
-              aria-label="Remove tribute"
-            >
-              <Trash2 size={12} />
-            </button>
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  store.moveTribute(i, i - 1)
+                  setExpandedIndex(i - 1)
+                }}
+                disabled={i === 0}
+                className="p-1 text-muted-foreground/60 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                aria-label="Move tribute up"
+              >
+                <ChevronUp size={14} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  store.moveTribute(i, i + 1)
+                  setExpandedIndex(i + 1)
+                }}
+                disabled={i === store.tributes.length - 1}
+                className="p-1 text-muted-foreground/60 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                aria-label="Move tribute down"
+              >
+                <ChevronDown size={14} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (confirm('Remove this tribute section?')) store.removeTribute(i)
+                }}
+                className="p-1 text-muted-foreground/60 hover:text-red-400 transition-colors"
+                aria-label="Remove tribute"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
           </button>
 
           {/* Accordion content */}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Radio, Loader2, Copy, Check, ExternalLink } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Radio, Loader2, Copy, Check, ExternalLink, Printer } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -228,6 +229,15 @@ export default function PublishLiveServiceDialog({ open, onOpenChange }) {
             >
               Share on WhatsApp
             </button>
+
+            {/* Print QR Cards */}
+            <Link
+              to="/qr-cards"
+              onClick={() => onOpenChange(false)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs border border-input hover:bg-accent text-card-foreground rounded-lg transition-colors"
+            >
+              <Printer size={14} /> Print QR Code Cards
+            </Link>
 
             <button
               onClick={() => { setStep('preview') }}

@@ -187,6 +187,59 @@
   display: none;
 }
 
+/* Print styles — shared */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Receipt booklet — landscape */
+  .receipt-page {
+    page-break-after: always;
+    break-after: page;
+  }
+  .receipt-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+  .receipt-print-area {
+    width: 100%;
+  }
+  .receipt-print-area > .receipt-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+
+  /* QR code cards — portrait */
+  .qr-print-area {
+    display: block !important;
+    width: 100%;
+  }
+  .qr-print-page {
+    width: 100vw;
+    height: 100vh;
+    page-break-after: always;
+    break-after: page;
+  }
+  .qr-print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+}
+
+/* Default page size — overridden per page via inline styles */
+@page {
+  margin: 0;
+}
+
 /* Range input styling */
 input[type="range"] {
   -webkit-appearance: none;

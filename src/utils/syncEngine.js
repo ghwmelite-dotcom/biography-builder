@@ -7,7 +7,7 @@ const PRODUCT_CONFIG = {
   brochure: {
     storageKey: 'funeral-brochure-data',
     listKey: 'funeral-brochures-list',
-    imageFields: ['coverPhoto', 'biographyPhotos.*', 'galleryPhotos.*.src', 'tributes.*.photos.*'],
+    imageFields: ['coverPhoto', 'backCoverPhoto', 'biographyPhotos.*', 'galleryPhotos.*.src', 'tributes.*.photos.*'],
   },
   poster: {
     storageKey: 'obituary-poster-data',
@@ -49,6 +49,68 @@ const PRODUCT_CONFIG = {
     listKey: null,
     imageFields: [],
   },
+}
+
+// ─── URL detection + download back to base64 ───────────────────────────────
+
+const API_BASE = import.meta.env.VITE_AUTH_API_URL || 'https://funeralpress-auth-api.ghwmelite.workers.dev'
+
+function isCloudImageUrl(str) {
+  return typeof str === 'string' && str.startsWith(API_BASE + '/images/')
+}
+
+async function urlToBase64(url) {
+  const res = await fetch(url)
+  if (!res.ok) return url // keep URL on failure
+  const blob = await res.blob()
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result)
+    reader.onerror = () => resolve(url)
+    reader.readAsDataURL(blob)
+  })
+}
+
+async function rehydrateImages(data, imageFields) {
+  if (!imageFields.length) return data
+  const clone = JSON.parse(JSON.stringify(data))
+  for (const fieldPath of imageFields) {
+    await walkAndDownload(clone, fieldPath.split('.'))
+  }
+  return clone
+}
+
+async function walkAndDownload(obj, parts) {
+  if (!obj || parts.length === 0) return
+
+  const [current, ...rest] = parts
+
+  if (current === '*') {
+    if (Array.isArray(obj)) {
+      for (let i = 0; i < obj.length; i++) {
+        if (rest.length === 0) {
+          if (isCloudImageUrl(obj[i])) {
+            try { obj[i] = await urlToBase64(obj[i]) } catch { /* keep URL */ }
+          }
+        } else {
+          await walkAndDownload(obj[i], rest)
+        }
+      }
+    }
+    return
+  }
+
+  if (rest.length === 0) {
+    if (isCloudImageUrl(obj[current])) {
+      try { obj[current] = await urlToBase64(obj[current]) } catch { /* keep URL */ }
+    }
+  } else {
+    if (Array.isArray(obj[current])) {
+      await walkAndDownload(obj[current], rest)
+    } else if (obj[current] && typeof obj[current] === 'object') {
+      await walkAndDownload(obj[current], rest)
+    }
+  }
 }
 
 // ─── Base64 detection + upload ──────────────────────────────────────────────
@@ -273,5 +335,15 @@ export async function fetchCloudDesignList() {
 
 export async function loadCloudDesign(id) {
   const res = await apiFetch(`/designs/${id}`)
-  return res.design
+  const design = res.design
+  if (design && design.data) {
+    const rawData = typeof design.data === 'string' ? JSON.parse(design.data) : design.data
+    // Determine product type to find image fields
+    const productType = design.product_type || 'brochure'
+    const config = PRODUCT_CONFIG[productType]
+    if (config && config.imageFields.length > 0) {
+      design.data = await rehydrateImages(rawData, config.imageFields)
+    }
+  }
+  return design
 }

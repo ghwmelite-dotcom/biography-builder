@@ -25,6 +25,7 @@ import TributesForm from '../editor/TributesForm'
 import PhotoGalleryForm from '../editor/PhotoGalleryForm'
 import AcknowledgementsForm from '../editor/AcknowledgementsForm'
 import BackCoverForm from '../editor/BackCoverForm'
+import PrintMaterialsForm from '../editor/PrintMaterialsForm'
 
 const sections = [
   { key: 'basic', title: 'Basic Information', icon: '1', component: BasicInfoForm },
@@ -37,6 +38,7 @@ const sections = [
   { key: 'gallery', title: 'Photo Gallery', icon: '8', component: PhotoGalleryForm },
   { key: 'ack', title: 'Acknowledgements', icon: '9', component: AcknowledgementsForm },
   { key: 'back', title: 'Back Cover', icon: '10', component: BackCoverForm },
+  { key: 'print', title: 'Print Materials', icon: '11', component: PrintMaterialsForm },
 ]
 
 function extractPdfData() {
@@ -204,7 +206,12 @@ export default function EditorLayout() {
                   >
                     <div className="overflow-hidden">
                       <div className="px-3 pb-4 pt-2 border-t border-border/50">
-                        <Component />
+                        <Component
+                          {...(key === 'print' ? {
+                            onOpenPublish: () => setPublishDialogOpen(true),
+                            onOpenLiveService: () => setLiveServiceDialogOpen(true),
+                          } : {})}
+                        />
                       </div>
                     </div>
                   </div>
