@@ -32,6 +32,7 @@ const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'))
 const LiveServicePage = lazy(() => import('./pages/LiveServicePage'))
 const ReceiptPage = lazy(() => import('./pages/ReceiptPage'))
 const QRCodePrintPage = lazy(() => import('./pages/QRCodePrintPage'))
+const WreathCardsPage = lazy(() => import('./pages/WreathCardsPage'))
 
 function LoadingFallback() {
   return (
@@ -99,6 +100,7 @@ export default function App() {
               <Route path="/live-service/:id" element={<LiveServicePage />} />
               <Route path="/receipt" element={<ReceiptPage />} />
               <Route path="/qr-cards" element={<QRCodePrintPage />} />
+              <Route path="/wreath-cards" element={<WreathCardsPage />} />
             </Routes>
           </Suspense>
         </BrowserRouter>
