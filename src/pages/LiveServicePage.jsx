@@ -107,6 +107,8 @@ export default function LiveServicePage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const contentRef = useRef(null)
+  const [downloading, setDownloading] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -150,8 +152,6 @@ export default function LiveServicePage() {
 
   const theme = themes[data.theme] || themes.blackGold
   const serviceItems = data.serviceItems || []
-  const contentRef = useRef(null)
-  const [downloading, setDownloading] = useState(false)
 
   const handleDownload = async () => {
     if (!contentRef.current || downloading) return
