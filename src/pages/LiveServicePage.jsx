@@ -14,8 +14,8 @@ function formatDate(dateStr) {
 }
 
 function ServiceItem({ item, index, theme }) {
-  const [expanded, setExpanded] = useState(false)
   const hasVerses = item.type === 'hymn' && item.verses && item.verses.length > 0
+  const [expanded, setExpanded] = useState(hasVerses)
 
   return (
     <div
