@@ -241,9 +241,9 @@ export default function PublishLiveServiceDialog({ open, onOpenChange }) {
 
             <button
               onClick={() => { setStep('preview') }}
-              className="w-full text-xs text-muted-foreground hover:text-card-foreground transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-lg transition-colors font-medium"
             >
-              Update service data
+              <Radio size={14} /> Update Live Service
             </button>
           </div>
         )}
