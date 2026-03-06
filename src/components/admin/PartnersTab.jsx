@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Users, UserPlus, UserMinus, Loader2 } from 'lucide-react'
+import { Users, UserPlus, UserMinus, Loader2, Check } from 'lucide-react'
 import { useAdminStore } from '../../stores/adminStore'
 import {
   Dialog,
@@ -10,8 +10,73 @@ import {
   DialogFooter,
 } from '../ui/dialog'
 
+function PartnerTypeBadge({ partnerType }) {
+  if (partnerType === 'church') {
+    return (
+      <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+        Church
+      </span>
+    )
+  }
+  if (partnerType === 'funeral_home') {
+    return (
+      <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+        Funeral Home
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+      Individual
+    </span>
+  )
+}
+
+const TIER_RATES = { default: 10 }
+
+function CommissionOverrideInput({ partner, onSave }) {
+  const currentRate = partner.partner_commission_override != null
+    ? partner.partner_commission_override
+    : TIER_RATES.default
+  const [value, setValue] = useState(String(currentRate))
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    const rate = parseFloat(value)
+    if (isNaN(rate) || rate < 0 || rate > 100) return
+    setSaving(true)
+    try {
+      await onSave(partner.id, rate)
+    } catch { /* ignore */ }
+    setSaving(false)
+  }
+
+  return (
+    <div className="inline-flex items-center gap-1">
+      <input
+        type="number"
+        min="0"
+        max="100"
+        step="0.5"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="w-14 px-1.5 py-0.5 text-xs bg-muted border border-border rounded text-foreground text-center focus:outline-none focus:ring-1 focus:ring-primary/30"
+      />
+      <span className="text-[10px] text-muted-foreground">%</span>
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/10 rounded transition-colors disabled:opacity-50"
+      >
+        {saving ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
+        <span className="ml-0.5">Set</span>
+      </button>
+    </div>
+  )
+}
+
 export default function PartnersTab() {
-  const { partners, fetchPartners, fetchUsers, users, promotePartner, demotePartner, isLoading } = useAdminStore()
+  const { partners, fetchPartners, fetchUsers, users, promotePartner, demotePartner, setCommissionOverride, isLoading } = useAdminStore()
 
   const [promoteOpen, setPromoteOpen] = useState(false)
   const [promoteSearch, setPromoteSearch] = useState('')
@@ -21,6 +86,8 @@ export default function PartnersTab() {
 
   const [demoteTarget, setDemoteTarget] = useState(null)
   const [demoting, setDemoting] = useState(false)
+
+  const [typeFilter, setTypeFilter] = useState('all')
 
   useEffect(() => {
     fetchPartners()
@@ -60,11 +127,29 @@ export default function PartnersTab() {
 
   const formatGHS = (pesewas) => `GHS ${(pesewas / 100).toFixed(2)}`
 
+  const filteredPartners = typeFilter === 'all'
+    ? partners
+    : typeFilter === 'individual'
+      ? partners.filter(p => !p.partner_type)
+      : partners.filter(p => p.partner_type === typeFilter)
+
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{partners.length} partner{partners.length !== 1 ? 's' : ''}</p>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted-foreground">{filteredPartners.length} partner{filteredPartners.length !== 1 ? 's' : ''}</p>
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="px-2 py-1 text-xs bg-muted border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="all">All Partners</option>
+            <option value="church">Churches</option>
+            <option value="funeral_home">Funeral Homes</option>
+            <option value="individual">Individual</option>
+          </select>
+        </div>
         <button
           onClick={handleOpenPromote}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
@@ -85,14 +170,18 @@ export default function PartnersTab() {
                 <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground">Code</th>
                 <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground">Referrals</th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground hidden md:table-cell">Earned</th>
+                <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground hidden lg:table-cell">Commission</th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {partners.map(p => (
+              {filteredPartners.map(p => (
                 <tr key={p.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3">
-                    <p className="text-foreground font-medium text-sm">{p.partner_name || p.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-foreground font-medium text-sm">{p.partner_name || p.name}</p>
+                      <PartnerTypeBadge partnerType={p.partner_type} />
+                    </div>
                     <p className="text-[10px] text-muted-foreground">{p.name}</p>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell truncate max-w-[200px]">{p.email}</td>
@@ -102,6 +191,13 @@ export default function PartnersTab() {
                   <td className="px-4 py-3 text-center font-medium text-foreground">{p.referral_count}</td>
                   <td className="px-4 py-3 text-right font-medium text-foreground hidden md:table-cell">
                     {formatGHS(p.total_earned)}
+                  </td>
+                  <td className="px-4 py-3 text-center hidden lg:table-cell">
+                    {p.partner_type ? (
+                      <CommissionOverrideInput partner={p} onSave={setCommissionOverride} />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{TIER_RATES.default}%</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
@@ -114,9 +210,9 @@ export default function PartnersTab() {
                   </td>
                 </tr>
               ))}
-              {partners.length === 0 && (
+              {filteredPartners.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
                     {isLoading ? 'Loading...' : 'No partners yet'}
                   </td>
                 </tr>

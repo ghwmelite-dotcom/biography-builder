@@ -17,7 +17,10 @@
       "Bash(npx vite:*)",
       "Bash(npx wrangler:*)",
       "Bash(mv:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(rm:*)"
     ]
   }
 }

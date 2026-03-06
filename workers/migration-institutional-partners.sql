@@ -1,0 +1,5 @@
+ALTER TABLE users ADD COLUMN partner_type TEXT DEFAULT NULL;
+ALTER TABLE users ADD COLUMN partner_logo_url TEXT DEFAULT NULL;
+ALTER TABLE users ADD COLUMN partner_welcome_msg TEXT DEFAULT NULL;
+ALTER TABLE users ADD COLUMN partner_denomination TEXT DEFAULT NULL;
+ALTER TABLE users ADD COLUMN partner_commission_override REAL DEFAULT NULL;

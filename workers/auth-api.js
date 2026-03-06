@@ -187,6 +187,9 @@ const PLANS = {
   single: { amount: 3500, credits: 1 },
   bundle: { amount: 7500, credits: 3 },
   suite:  { amount: 12000, credits: -1 }, // -1 = unlimited
+  bulk10: { amount: 25000, credits: 10, institutional: true },
+  bulk25: { amount: 50000, credits: 25, institutional: true },
+  bulk50: { amount: 80000, credits: 50, institutional: true },
 }
 
 // ─── Print fulfillment pricing ──────────────────────────────────────────────
@@ -266,8 +269,9 @@ const DELIVERY_FEES = {
   'bono': 4500, 'bono-east': 4500, 'ahafo': 4500,
   'western-north': 4500, 'oti': 5000, 'north-east': 5500, 'savannah': 5500,
 }
+const INSTITUTIONAL_PRINT_DISCOUNT = 0.15
 
-function calculatePrintPrice(productType, quantity, paperQuality, deliveryRegion, size) {
+function calculatePrintPrice(productType, quantity, paperQuality, deliveryRegion, size, institutionalDiscount = 0) {
   const product = PRINT_PRICING[productType]
   if (!product || quantity < product.min) return null
   const sizeKey = size || product.defaultSize
@@ -276,7 +280,7 @@ function calculatePrintPrice(productType, quantity, paperQuality, deliveryRegion
   const qualityMult = PAPER_MULTIPLIER[paperQuality] || 1.0
   const tier = QUANTITY_TIERS.find(t => quantity >= t.min && quantity <= t.max)
   const discount = tier ? tier.discount : 0.20
-  const perUnit = Math.round(sizeInfo.base * qualityMult * (1 - discount))
+  const perUnit = Math.round(sizeInfo.base * qualityMult * (1 - discount) * (1 - institutionalDiscount))
   const printCost = perUnit * quantity
   const deliveryFee = DELIVERY_FEES[deliveryRegion] || 4000
   return { perUnit, printCost, deliveryFee, total: printCost + deliveryFee, discount: Math.round(discount * 100), minQuantity: product.min, size: sizeKey, sizeLabel: sizeInfo.label }
@@ -333,6 +337,7 @@ async function handleGoogleLogin(request, env) {
     user: {
       id: user.id, email: user.email, name: user.name, picture: user.picture,
       isPartner: !!(user.is_partner), referralCode: user.referral_code || null,
+      partnerType: user.partner_type || null, partnerLogoUrl: user.partner_logo_url || null, partnerDenomination: user.partner_denomination || null,
       isAdmin: SUPER_ADMINS.includes(user.email),
       credits: purchaseData.credits,
       isUnlimited: purchaseData.isUnlimited,
@@ -374,6 +379,7 @@ async function handleRefresh(request, env) {
     user: {
       id: user.id, email: user.email, name: user.name, picture: user.picture,
       isPartner: !!(user.is_partner), referralCode: user.referral_code || null,
+      partnerType: user.partner_type || null, partnerLogoUrl: user.partner_logo_url || null, partnerDenomination: user.partner_denomination || null,
       isAdmin: SUPER_ADMINS.includes(user.email),
       credits: purchaseData.credits,
       isUnlimited: purchaseData.isUnlimited,
@@ -394,13 +400,14 @@ async function handleLogout(request, env, userId) {
 }
 
 async function handleGetMe(request, env, userId) {
-  const user = await env.DB.prepare('SELECT id, email, name, picture, is_partner, referral_code, partner_name FROM users WHERE id = ?').bind(userId).first()
+  const user = await env.DB.prepare('SELECT id, email, name, picture, is_partner, referral_code, partner_name, partner_type, partner_logo_url, partner_denomination FROM users WHERE id = ?').bind(userId).first()
   if (!user) return error('User not found', 404, request)
   const purchaseData = await getUserPurchaseData(env, userId)
   return json({
     user: {
       id: user.id, email: user.email, name: user.name, picture: user.picture,
       isPartner: !!(user.is_partner), referralCode: user.referral_code || null, partnerName: user.partner_name || null,
+      partnerType: user.partner_type || null, partnerLogoUrl: user.partner_logo_url || null, partnerDenomination: user.partner_denomination || null,
       isAdmin: SUPER_ADMINS.includes(user.email),
       credits: purchaseData.credits,
       isUnlimited: purchaseData.isUnlimited,
@@ -508,7 +515,7 @@ async function handleMakePartner(request, env) {
   const adminSecret = request.headers.get('X-Admin-Secret')
   if (!adminSecret || adminSecret !== env.ADMIN_SECRET) return error('Forbidden', 403, request)
 
-  const { userId, partnerName } = await request.json()
+  const { userId, partnerName, partnerType, denomination } = await request.json()
   if (!userId || !partnerName) return error('Missing userId or partnerName', 400, request)
 
   const user = await env.DB.prepare('SELECT id, is_partner, referral_code FROM users WHERE id = ?').bind(userId).first()
@@ -519,8 +526,8 @@ async function handleMakePartner(request, env) {
   }
 
   const code = generateReferralCode()
-  await env.DB.prepare('UPDATE users SET is_partner = 1, referral_code = ?, partner_name = ? WHERE id = ?')
-    .bind(code, partnerName, userId).run()
+  await env.DB.prepare('UPDATE users SET is_partner = 1, referral_code = ?, partner_name = ?, partner_type = ?, partner_denomination = ? WHERE id = ?')
+    .bind(code, partnerName, partnerType || null, denomination || null, userId).run()
 
   return json({ ok: true, referralCode: code }, 200, request)
 }
@@ -547,7 +554,7 @@ async function handleTrackReferral(request, env, userId) {
 }
 
 async function handleGetPartnerProfile(request, env, userId) {
-  const user = await env.DB.prepare('SELECT id, partner_name, referral_code, is_partner FROM users WHERE id = ? AND is_partner = 1').bind(userId).first()
+  const user = await env.DB.prepare('SELECT id, partner_name, referral_code, is_partner, partner_type, partner_logo_url, partner_welcome_msg, partner_denomination FROM users WHERE id = ? AND is_partner = 1').bind(userId).first()
   if (!user) return error('Not a partner', 403, request)
 
   const stats = await env.DB.prepare(
@@ -562,6 +569,10 @@ async function handleGetPartnerProfile(request, env, userId) {
       referralCode: user.referral_code,
       totalReferrals: stats?.totalReferrals || 0,
       totalDesigns: stats?.totalDesigns || 0,
+      partnerType: user.partner_type,
+      logoUrl: user.partner_logo_url,
+      welcomeMsg: user.partner_welcome_msg,
+      denomination: user.partner_denomination,
     },
   }, 200, request)
 }
@@ -580,6 +591,58 @@ async function handleGetPartnerReferrals(request, env, userId) {
   ).bind(userId).all()
 
   return json({ referrals: rows.results }, 200, request)
+}
+
+async function handleUpdatePartnerProfile(request, env, userId) {
+  const user = await env.DB.prepare('SELECT id FROM users WHERE id = ? AND is_partner = 1').bind(userId).first()
+  if (!user) return error('Not a partner', 403, request)
+
+  const { partnerType, welcomeMsg, denomination } = await request.json()
+  if (partnerType && partnerType !== 'church' && partnerType !== 'funeral_home') {
+    return error('partnerType must be church or funeral_home', 400, request)
+  }
+
+  await env.DB.prepare(
+    "UPDATE users SET partner_type = ?, partner_welcome_msg = ?, partner_denomination = ?, updated_at = datetime('now') WHERE id = ?"
+  ).bind(partnerType || null, welcomeMsg || null, denomination || null, userId).run()
+
+  return json({ ok: true }, 200, request)
+}
+
+async function handlePartnerLogoUpload(request, env, userId) {
+  const user = await env.DB.prepare('SELECT id FROM users WHERE id = ? AND is_partner = 1').bind(userId).first()
+  if (!user) return error('Not a partner', 403, request)
+
+  const formData = await request.formData()
+  const logo = formData.get('logo')
+  if (!logo || !(logo instanceof File)) return error('Missing logo file', 400, request)
+
+  const ext = logo.name.split('.').pop()?.toLowerCase() || 'png'
+  const key = `partner-logos/${userId}.${ext}`
+  const bytes = await logo.arrayBuffer()
+
+  await env.IMAGES.put(key, bytes, { httpMetadata: { contentType: logo.type } })
+
+  const logoUrl = `/images/${key}`
+  await env.DB.prepare("UPDATE users SET partner_logo_url = ?, updated_at = datetime('now') WHERE id = ?")
+    .bind(logoUrl, userId).run()
+
+  return json({ ok: true, logoUrl }, 200, request)
+}
+
+async function handlePublicPartnerPage(request, env, code) {
+  const user = await env.DB.prepare(
+    'SELECT partner_name, partner_type, partner_logo_url, partner_welcome_msg, partner_denomination FROM users WHERE referral_code = ? AND is_partner = 1'
+  ).bind(code).first()
+  if (!user) return error('Partner not found', 404, request)
+
+  return json({
+    name: user.partner_name,
+    type: user.partner_type,
+    logoUrl: user.partner_logo_url,
+    welcomeMsg: user.partner_welcome_msg,
+    denomination: user.partner_denomination,
+  }, 200, request)
 }
 
 // ─── Payment handlers ────────────────────────────────────────────────────────
@@ -605,8 +668,13 @@ async function handlePaymentInitialize(request, env, userId) {
   // Check for referral partner (for commission tracking)
   const referral = await env.DB.prepare('SELECT partner_id FROM referrals WHERE referred_user_id = ?').bind(userId).first()
   const partnerId = referral?.partner_id || null
-  const commissionRate = partnerId ? 0.10 : null
-  const commissionAmount = partnerId ? Math.round(planInfo.amount * 0.10) : null
+  let commissionRate = null
+  let commissionAmount = null
+  if (partnerId) {
+    const partner = await env.DB.prepare('SELECT partner_commission_override FROM users WHERE id = ?').bind(partnerId).first()
+    commissionRate = partner?.partner_commission_override || 0.10
+    commissionAmount = Math.round(planInfo.amount * commissionRate)
+  }
 
   const reference = `fp-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
   const orderId = generateId()
@@ -898,7 +966,7 @@ async function handleAdminPartners(request, env) {
   if (auth.error) return auth.error
 
   const rows = await env.DB.prepare(
-    `SELECT u.id, u.name, u.email, u.partner_name, u.referral_code,
+    `SELECT u.id, u.name, u.email, u.partner_name, u.referral_code, u.partner_type, u.partner_commission_override,
             (SELECT COUNT(*) FROM referrals WHERE partner_id = u.id) as referral_count,
             (SELECT COALESCE(SUM(o.commission_amount), 0) FROM orders o WHERE o.partner_id = u.id AND o.status = 'success') as total_earned
      FROM users u WHERE u.is_partner = 1
@@ -940,6 +1008,20 @@ async function handleAdminDemotePartner(request, env) {
   return json({ ok: true }, 200, request)
 }
 
+async function handleAdminSetCommissionOverride(request, env) {
+  const auth = await requireAdmin(request, env)
+  if (auth.error) return auth.error
+
+  const { userId, commissionRate } = await request.json()
+  if (!userId || commissionRate === undefined) return error('Missing userId or commissionRate', 400, request)
+
+  const rate = parseFloat(commissionRate)
+  if (isNaN(rate) || rate < 0 || rate > 1) return error('commissionRate must be between 0 and 1', 400, request)
+
+  await env.DB.prepare('UPDATE users SET partner_commission_override = ? WHERE id = ?').bind(rate, userId).run()
+  return json({ ok: true }, 200, request)
+}
+
 async function handleAdminDesigns(request, env) {
   const auth = await requireAdmin(request, env)
   if (auth.error) return auth.error
@@ -961,7 +1043,9 @@ async function handlePrintCalculate(request, env, userId) {
   if (!productType || !quantity || !paperQuality || !deliveryRegion) {
     return error('Missing required fields', 400, request)
   }
-  const pricing = calculatePrintPrice(productType, quantity, paperQuality, deliveryRegion, size)
+  const userRow = await env.DB.prepare('SELECT partner_type FROM users WHERE id = ?').bind(userId).first()
+  const instDiscount = userRow?.partner_type ? INSTITUTIONAL_PRINT_DISCOUNT : 0
+  const pricing = calculatePrintPrice(productType, quantity, paperQuality, deliveryRegion, size, instDiscount)
   if (!pricing) {
     const product = PRINT_PRICING[productType]
     if (!product) return error('Invalid product type', 400, request)
@@ -980,14 +1064,15 @@ async function handlePrintOrderCreate(request, env, userId) {
     return error('Missing required fields', 400, request)
   }
 
-  const pricing = calculatePrintPrice(productType, quantity, paperQuality, deliveryRegion, size)
+  const user = await env.DB.prepare('SELECT id, email, partner_type FROM users WHERE id = ?').bind(userId).first()
+  if (!user) return error('User not found', 404, request)
+
+  const instDiscount = user.partner_type ? INSTITUTIONAL_PRINT_DISCOUNT : 0
+  const pricing = calculatePrintPrice(productType, quantity, paperQuality, deliveryRegion, size, instDiscount)
   if (!pricing) {
     const product = PRINT_PRICING[productType]
     return error(product ? `Minimum quantity is ${product.min}` : 'Invalid product type', 400, request)
   }
-
-  const user = await env.DB.prepare('SELECT id, email FROM users WHERE id = ?').bind(userId).first()
-  if (!user) return error('User not found', 404, request)
 
   const reference = `fp-print-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
   const orderId = generateId()
@@ -1147,6 +1232,8 @@ export default {
       if (method === 'POST' && path === '/auth/refresh') return await handleRefresh(request, env)
       if (method === 'GET' && path.startsWith('/images/')) return await handleImageServe(request, env, path.slice(8))
       if (method === 'POST' && path === '/payments/webhook') return await handlePaymentWebhook(request, env)
+      const publicPartnerMatch = method === 'GET' && path.match(/^\/partner\/public\/([^/]+)$/)
+      if (publicPartnerMatch) return await handlePublicPartnerPage(request, env, publicPartnerMatch[1])
 
       // Admin routes (no JWT, uses X-Admin-Secret)
       if (method === 'POST' && path === '/admin/make-partner') return await handleMakePartner(request, env)
@@ -1160,6 +1247,7 @@ export default {
         if (method === 'GET' && path === '/admin/partners') return await handleAdminPartners(request, env)
         if (method === 'POST' && path === '/admin/partners/promote') return await handleAdminPromotePartner(request, env)
         if (method === 'POST' && path === '/admin/partners/demote') return await handleAdminDemotePartner(request, env)
+        if (method === 'POST' && path === '/admin/partners/commission-override') return await handleAdminSetCommissionOverride(request, env)
         if (method === 'GET' && path === '/admin/designs') return await handleAdminDesigns(request, env)
         if (method === 'GET' && path === '/admin/print-orders') return await handleAdminPrintOrders(request, env)
         const adminPrintMatch = path.match(/^\/admin\/print-orders\/([^/]+)$/)
@@ -1176,6 +1264,8 @@ export default {
       if (method === 'POST' && path === '/referrals/track') return await handleTrackReferral(request, env, userId)
       if (method === 'GET' && path === '/partner/me') return await handleGetPartnerProfile(request, env, userId)
       if (method === 'GET' && path === '/partner/referrals') return await handleGetPartnerReferrals(request, env, userId)
+      if (method === 'POST' && path === '/partner/update-profile') return await handleUpdatePartnerProfile(request, env, userId)
+      if (method === 'POST' && path === '/partner/upload-logo') return await handlePartnerLogoUpload(request, env, userId)
       if (method === 'POST' && path === '/payments/initialize') return await handlePaymentInitialize(request, env, userId)
       if (method === 'POST' && path === '/payments/verify') return await handlePaymentVerify(request, env, userId)
       if (method === 'POST' && path === '/payments/unlock-design') return await handleUnlockDesign(request, env, userId)

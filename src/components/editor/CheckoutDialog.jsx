@@ -18,6 +18,12 @@ const PLANS = [
   { key: 'suite', name: 'Suite', price: 120, credits: 'Unlimited', desc: 'All products, forever' },
 ]
 
+const INSTITUTIONAL_PLANS = [
+  { key: 'bulk10', name: 'Starter Pack', price: 250, credits: '10 designs', desc: 'For small churches & funeral homes', badge: 'Save GHS 100' },
+  { key: 'bulk25', name: 'Growth Pack', price: 500, credits: '25 designs', desc: 'Most popular for institutions', badge: 'Best Value' },
+  { key: 'bulk50', name: 'Premium Pack', price: 800, credits: '50 designs', desc: 'High-volume partners', badge: 'Save GHS 950' },
+]
+
 export default function CheckoutDialog() {
   const checkoutOpen = usePurchaseStore(s => s.checkoutOpen)
   const pendingDownload = usePurchaseStore(s => s.pendingDownload)
@@ -27,6 +33,7 @@ export default function CheckoutDialog() {
   const handlePaymentSuccess = usePurchaseStore(s => s.handlePaymentSuccess)
   const unlockDesign = usePurchaseStore(s => s.unlockDesign)
   const isLoggedIn = useAuthStore(s => s.isLoggedIn)
+  const user = useAuthStore(s => s.user)
 
   const [stage, setStage] = useState('idle') // idle | has-credits | loading | paying | verifying | success | error | not-logged-in
   const [errorMsg, setErrorMsg] = useState('')
@@ -230,6 +237,42 @@ export default function CheckoutDialog() {
                   </div>
                 </button>
               ))}
+
+              {/* Institutional partner plans */}
+              {user?.partnerType && (
+                <>
+                  <div className="pt-4 pb-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Institutional Partner</p>
+                    <p className="text-sm font-semibold text-card-foreground mt-1">Partner Plans</p>
+                  </div>
+                  {INSTITUTIONAL_PLANS.map((plan) => (
+                    <button
+                      key={plan.key}
+                      onClick={() => handleSelectPlan(plan.key)}
+                      className={`w-full flex items-center gap-4 p-4 rounded-xl border border-primary/30 transition-colors text-left hover:border-primary/50 hover:bg-card/50 ${
+                        plan.badge === 'Best Value' ? 'bg-primary/5' : ''
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-card-foreground">{plan.name}</span>
+                          {plan.badge && (
+                            <span className="px-2 py-0.5 text-[10px] font-bold uppercase bg-primary/20 text-primary rounded-full">
+                              {plan.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{plan.desc}</p>
+                        <p className="text-xs text-muted-foreground">{plan.credits}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-lg font-bold text-card-foreground">GHS {plan.price}</span>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
+
               <p className="text-[10px] text-muted-foreground text-center pt-2">
                 MTN MoMo, Vodafone Cash, Visa & Mastercard accepted
               </p>

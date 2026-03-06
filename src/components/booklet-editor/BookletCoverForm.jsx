@@ -1,11 +1,30 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useBookletStore } from '../../stores/bookletStore'
 import { bookletTemplates } from '../../utils/bookletDefaultData'
 import { BookOpen, ChevronDown } from 'lucide-react'
 
+const denominationOptions = [
+  { value: 'all', label: 'All' },
+  { value: 'methodist', label: 'Methodist' },
+  { value: 'catholic', label: 'Catholic' },
+  { value: 'presbyterian', label: 'Presbyterian' },
+  { value: 'pentecostal', label: 'Pentecostal' },
+  { value: 'charismatic', label: 'Charismatic' },
+  { value: 'adventist', label: 'Adventist' },
+  { value: 'anglican', label: 'Anglican' },
+]
+
 export default function BookletCoverForm() {
   const store = useBookletStore()
   const [templateOpen, setTemplateOpen] = useState(false)
+  const [denominationFilter, setDenominationFilter] = useState('all')
+
+  const filteredTemplates = useMemo(() => {
+    return Object.entries(bookletTemplates).filter(([, tpl]) => {
+      if (denominationFilter === 'all') return true
+      return tpl.denomination === denominationFilter || !tpl.denomination
+    })
+  }, [denominationFilter])
 
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0]
@@ -38,7 +57,18 @@ export default function BookletCoverForm() {
         </button>
         {templateOpen && (
           <div className="absolute top-full left-0 mt-1 z-20 w-72 max-w-[calc(100vw-2rem)] bg-card border border-input rounded-lg shadow-xl overflow-hidden">
-            {Object.entries(bookletTemplates).map(([key, tpl]) => (
+            <div className="px-3 py-2 border-b border-border">
+              <select
+                value={denominationFilter}
+                onChange={(e) => setDenominationFilter(e.target.value)}
+                className="w-full bg-card border border-input rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                {denominationOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            {filteredTemplates.map(([key, tpl]) => (
               <button
                 key={key}
                 onClick={() => handleApplyTemplate(key)}

@@ -80,6 +80,7 @@ import WreathCardMockup from '../components/landing/WreathCardMockup'
 import ExampleBrochureDialog from '../components/landing/ExampleBrochureDialog'
 import ThemePreviewCard from '../components/landing/ThemePreviewCard'
 import LoadSharedDialog from '../components/layout/LoadSharedDialog'
+import PartnerBanner from '../components/landing/PartnerBanner'
 import { captureReferralCode } from '../utils/referralTracker'
 
 const FEATURES = [
@@ -196,6 +197,18 @@ export default function LandingPage() {
     if (ref) {
       captureReferralCode(ref)
     }
+  }, [searchParams])
+
+  // Partner banner: fetch partner data when ?ref= or ?partner= is present
+  const [partnerData, setPartnerData] = useState(null)
+  useEffect(() => {
+    const code = searchParams.get('ref') || searchParams.get('partner')
+    if (!code) return
+    const API_BASE = import.meta.env.VITE_AUTH_API_URL || 'https://funeralpress-auth-api.ghwmelite.workers.dev'
+    fetch(`${API_BASE}/partner/public/${code}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setPartnerData(data) })
+      .catch(() => {})
   }, [searchParams])
 
   const handleNew = () => {
@@ -416,6 +429,9 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      {/* Partner banner (shown when ?ref=CODE or ?partner=CODE) */}
+      {partnerData && <PartnerBanner partner={partnerData} />}
+
       {/* Top-right controls */}
       <div className="fixed top-2 right-2 sm:top-4 sm:right-4 z-50 flex items-center gap-2">
         {user ? <UserMenu /> : <GoogleLoginButton />}

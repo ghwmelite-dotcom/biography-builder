@@ -18,6 +18,14 @@ import {
   Star,
   Crown,
   Gift,
+  Receipt,
+  Image,
+  BookOpen,
+  Layout,
+  Presentation,
+  Mail,
+  MessageCircle,
+  Wrench,
 } from 'lucide-react'
 import { Sun, Moon } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
@@ -25,6 +33,7 @@ import { usePartnerStore } from '../stores/partnerStore'
 import { useThemeStore } from '../stores/themeStore'
 import UserMenu from '../components/auth/UserMenu'
 import GoogleLoginButton from '../components/auth/GoogleLoginButton'
+import WhatsAppTemplates from '../components/partner/WhatsAppTemplates'
 
 // ─── Commission config ───────────────────────────────────────────────────────
 
@@ -301,6 +310,41 @@ export default function PartnerDashboardPage() {
           </div>
         )}
 
+        {/* ═══ Quick Tools ═══ */}
+        {profile && (
+          <div className="bg-card border border-border rounded-xl p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Wrench size={16} className="text-primary" />
+              <h2 className="text-sm font-semibold text-foreground">Quick Tools</h2>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {(profile.partner_type === 'funeral_home' ? [
+                { label: 'Receipt Generator', to: '/receipt', icon: Receipt },
+                { label: 'Poster Editor', to: '/poster', icon: Image },
+                { label: 'Banner Editor', to: '/banner', icon: Layout },
+                { label: 'Booklet Editor', to: '/booklet', icon: BookOpen },
+              ] : [
+                { label: 'Programme Booklet', to: '/booklet', icon: BookOpen },
+                { label: 'Brochure Editor', to: '/editor', icon: FileText },
+                { label: 'Invitation Editor', to: '/invitation', icon: Mail },
+                { label: 'Slideshow Maker', to: '/slideshow', icon: Presentation },
+              ]).map((tool) => {
+                const ToolIcon = tool.icon
+                return (
+                  <Link
+                    key={tool.to}
+                    to={tool.to}
+                    className="flex flex-col items-center gap-2 p-4 bg-muted/30 border border-border rounded-lg hover:border-primary/40 hover:bg-primary/5 transition-all text-center group"
+                  >
+                    <ToolIcon size={20} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                    <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">{tool.label}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ═══ Commission Tiers ═══ */}
         <div className="bg-card border border-border rounded-xl mb-6 overflow-hidden">
           <button
@@ -444,6 +488,14 @@ export default function PartnerDashboardPage() {
           </div>
         </div>
 
+        {/* ═══ WhatsApp Broadcast Templates ═══ */}
+        {profile && (
+          <WhatsAppTemplates
+            partnerType={profile.partner_type}
+            referralUrl={referralUrl}
+          />
+        )}
+
         {/* ═══ Referrals List ═══ */}
         <div>
           <div className="flex items-center justify-between mb-4">
@@ -535,6 +587,49 @@ export default function PartnerDashboardPage() {
               )}
             </>
           )}
+        </div>
+
+        {/* ═══ Partner Support Channel ═══ */}
+        <div className="mt-8 bg-card border border-border rounded-xl p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <MessageCircle size={16} className="text-primary" />
+            <h2 className="text-sm font-semibold text-foreground">Partner Support</h2>
+            {profile?.partner_type && (
+              <span className="text-[9px] bg-primary text-white px-1.5 py-0.5 rounded-full uppercase tracking-wider font-bold ml-auto">
+                Priority Support
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <a
+              href="https://chat.whatsapp.com/FuneralPressPartners"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 p-3 bg-muted/30 border border-border rounded-lg hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all group"
+            >
+              <div className="w-9 h-9 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                <MessageCircle size={16} className="text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground group-hover:text-emerald-400 transition-colors">WhatsApp Partner Group</p>
+                <p className="text-[10px] text-muted-foreground">Join our partner community for updates and support</p>
+              </div>
+            </a>
+
+            <a
+              href="mailto:partners@funeralpress.org"
+              className="flex items-center gap-3 p-3 bg-muted/30 border border-border rounded-lg hover:border-primary/40 hover:bg-primary/5 transition-all group"
+            >
+              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Mail size={16} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">partners@funeralpress.org</p>
+                <p className="text-[10px] text-muted-foreground">Email us for account or payout enquiries</p>
+              </div>
+            </a>
+          </div>
         </div>
 
         {/* ═══ How It Works ═══ */}

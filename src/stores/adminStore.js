@@ -99,6 +99,21 @@ export const useAdminStore = create((set, get) => ({
     get().fetchPartners()
   },
 
+  setCommissionOverride: async (userId, commissionRate) => {
+    const data = await apiFetch('/admin/partners/commission-override', {
+      method: 'POST',
+      body: JSON.stringify({ userId, commissionRate }),
+    })
+    // Update partner in local state
+    const { partners } = get()
+    set({
+      partners: partners.map(p =>
+        p.id === userId ? { ...p, partner_commission_override: commissionRate } : p
+      ),
+    })
+    return data
+  },
+
   fetchDesigns: async () => {
     set({ isLoading: true })
     try {

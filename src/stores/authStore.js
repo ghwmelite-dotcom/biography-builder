@@ -19,6 +19,16 @@ function saveAuth(data) {
   } catch { /* ignore */ }
 }
 
+function normalizeUser(user) {
+  if (!user) return user
+  return {
+    ...user,
+    partnerType: user.partnerType || null,
+    partnerLogoUrl: user.partnerLogoUrl || null,
+    partnerDenomination: user.partnerDenomination || null,
+  }
+}
+
 function isTokenExpired(token) {
   try {
     const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
@@ -40,7 +50,7 @@ export const useAuthStore = create((set, get) => ({
     const saved = loadAuth()
     if (saved) {
       set({
-        user: saved.user,
+        user: normalizeUser(saved.user),
         accessToken: saved.accessToken,
         refreshToken: saved.refreshToken,
         hasMigrated: saved.hasMigrated || false,
@@ -67,7 +77,7 @@ export const useAuthStore = create((set, get) => ({
       }
       const data = await res.json()
       const state = {
-        user: data.user,
+        user: normalizeUser(data.user),
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
       }
@@ -118,8 +128,9 @@ export const useAuthStore = create((set, get) => ({
         return null
       }
       const data = await res.json()
-      set({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken })
-      saveAuth({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken, hasMigrated: get().hasMigrated })
+      const refreshedUser = normalizeUser(data.user)
+      set({ user: refreshedUser, accessToken: data.accessToken, refreshToken: data.refreshToken })
+      saveAuth({ user: refreshedUser, accessToken: data.accessToken, refreshToken: data.refreshToken, hasMigrated: get().hasMigrated })
 
       // Hydrate purchase data from refresh response
       import('../stores/purchaseStore').then(({ usePurchaseStore }) => {
@@ -174,8 +185,9 @@ export const useAuthStore = create((set, get) => ({
       if (!res.ok) return
       const data = await res.json()
       const current = get()
-      set({ user: data.user })
-      saveAuth({ user: data.user, accessToken: current.accessToken, refreshToken: current.refreshToken, hasMigrated: current.hasMigrated })
+      const meUser = normalizeUser(data.user)
+      set({ user: meUser })
+      saveAuth({ user: meUser, accessToken: current.accessToken, refreshToken: current.refreshToken, hasMigrated: current.hasMigrated })
     } catch { /* ignore */ }
   },
 }))

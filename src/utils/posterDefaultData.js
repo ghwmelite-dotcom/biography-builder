@@ -265,6 +265,28 @@ export const posterTemplates = {
       dressCode: 'BLACK & WHITE',
     },
   },
+  funeralHomeBranded: {
+    name: 'Funeral Home Branded',
+    description: 'Professional poster with funeral home branding',
+    icon: 'Building2',
+    institutional: true,
+    data: {
+      posterTheme: 'royalBlue',
+      headerTitle: 'IN LOVING MEMORY',
+      footerText: 'Services provided by our funeral home',
+    },
+  },
+  funeralHomeElegant: {
+    name: 'Funeral Home Elegant',
+    description: 'Elegant branded poster for funeral homes',
+    icon: 'Building2',
+    institutional: true,
+    data: {
+      posterTheme: 'burgundyIvory',
+      headerTitle: 'CELEBRATION OF LIFE',
+      footerText: 'Professional services by our funeral home',
+    },
+  },
 }
 
 export const posterDefaultData = {

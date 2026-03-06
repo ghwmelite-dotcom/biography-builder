@@ -43,6 +43,32 @@ export const bannerTemplates = {
       familyText: 'Rest in perfect peace until we meet again.',
     },
   },
+  funeralHomeBanner: {
+    name: 'Funeral Home Branded',
+    description: 'Professional banner with funeral home branding',
+    icon: 'Building2',
+    institutional: true,
+    data: {
+      bannerTheme: 'royalBlue',
+      headerTitle: 'IN LOVING MEMORY OF',
+      scriptureVerse: 'Blessed are those who mourn, for they shall be comforted.',
+      scriptureRef: 'Matthew 5:4',
+      familyText: 'Professional funeral services provided with care and dignity.',
+    },
+  },
+  funeralHomeElegantBanner: {
+    name: 'Funeral Home Elegant',
+    description: 'Elegant branded banner for funeral homes',
+    icon: 'Building2',
+    institutional: true,
+    data: {
+      bannerTheme: 'burgundyIvory',
+      headerTitle: 'A LIFE WELL LIVED',
+      scriptureVerse: 'The memory of the righteous is a blessing.',
+      scriptureRef: 'Proverbs 10:7',
+      familyText: 'Honoring lives with dignity and grace.',
+    },
+  },
 }
 
 export const bannerDefaultData = {
