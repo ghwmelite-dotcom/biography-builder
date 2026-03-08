@@ -9,6 +9,7 @@
  * 2. Create Worker named "brochure-memorial-api"
  * 3. Bind KV namespace: MEMORIAL_PAGES_KV -> MEMORIAL_PAGES
  * 4. Deploy this code
+ * 5. Bind D1 database: DB -> funeralpress-db (for tweet queue)
  */
 
 const corsHeaders = {
@@ -52,6 +53,22 @@ async function handlePost(request, env) {
       ...body,
       publishedAt: new Date().toISOString(),
     }), { expirationTtl: 365 * 24 * 60 * 60 })
+
+    // Queue anonymized tweet for X auto-poster
+    if (env.DB) {
+      try {
+        await env.DB.prepare(
+          `INSERT INTO tweet_queue (source, content, url, priority) VALUES (?, ?, ?, ?)`
+        ).bind(
+          'memorial',
+          'A new memorial page has been created on FuneralPress. Honor their memory and leave a tribute \u2192',
+          `https://funeralpress.org/memorial/${id}`,
+          3
+        ).run()
+      } catch (e) {
+        console.error('Tweet queue insert failed:', e.message)
+      }
+    }
 
     return new Response(JSON.stringify({ id, url: `https://funeralpress.org/memorial/${id}` }), {
       status: 200,
