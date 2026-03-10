@@ -6,6 +6,7 @@ import { useAdminStore } from '../stores/adminStore'
 import { useThemeStore } from '../stores/themeStore'
 import UserMenu from '../components/auth/UserMenu'
 import GoogleLoginButton from '../components/auth/GoogleLoginButton'
+import NotificationBell from '../components/admin/NotificationBell'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 
 const OverviewTab = lazy(() => import('../components/admin/OverviewTab'))
@@ -40,6 +41,7 @@ export default function AdminDashboardPage() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Top bar */}
       <div className="fixed top-2 right-2 sm:top-4 sm:right-4 z-50 flex items-center gap-2">
+        <NotificationBell />
         {user ? <UserMenu /> : <GoogleLoginButton />}
         <button
           onClick={toggleTheme}

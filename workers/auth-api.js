@@ -169,7 +169,46 @@ function generateReferralCode() {
 
 // ─── Super admin ─────────────────────────────────────────────────────────────
 
-const SUPER_ADMINS = ['oh84dev@gmail.com']
+const SUPER_ADMINS = ['oh84dev@gmail.com', 'oh84dev@funeralpress.org']
+
+// ─── Admin notification helpers ─────────────────────────────────────────────
+
+const ADMIN_EMAIL = 'oh84dev@funeralpress.org'
+
+const EMAIL_EVENTS = new Set([
+  'signup', 'payment', 'print_order', 'partner_app',
+  'guest_book_sign', 'memorial_created', 'live_service_created',
+])
+
+async function notifyAdmin(env, type, title, detail = {}) {
+  const detailJson = JSON.stringify(detail)
+  try {
+    await env.DB.prepare(
+      `INSERT INTO admin_notifications (type, title, detail) VALUES (?, ?, ?)`
+    ).bind(type, title, detailJson).run()
+  } catch (e) {
+    console.error('Notification insert failed:', e.message)
+  }
+  if (EMAIL_EVENTS.has(type) && env.RESEND_API_KEY) {
+    try {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'FuneralPress <notifications@funeralpress.org>',
+          to: [ADMIN_EMAIL],
+          subject: `[FuneralPress] ${title}`,
+          text: `${title}\n\nDetails:\n${Object.entries(detail).map(([k, v]) => `  ${k}: ${v}`).join('\n')}\n\nTime: ${new Date().toISOString()}\n\nView dashboard: https://funeralpress.org/admin`,
+        }),
+      })
+    } catch (e) {
+      console.error('Resend email failed:', e.message)
+    }
+  }
+}
 
 async function requireAdmin(request, env) {
   const jwtPayload = await authenticate(request, env)
@@ -303,7 +342,9 @@ async function handleGoogleLogin(request, env) {
 
   // Upsert user
   let user = await env.DB.prepare('SELECT * FROM users WHERE google_id = ?').bind(googleUser.sub).first()
+  let isNewUser = false
   if (!user) {
+    isNewUser = true
     user = {
       id: generateId(),
       google_id: googleUser.sub,
@@ -332,6 +373,10 @@ async function handleGoogleLogin(request, env) {
     .bind(generateId(), user.id, refreshHash, expiresAt).run()
 
   const purchaseData = await getUserPurchaseData(env, user.id)
+
+  if (isNewUser) {
+    notifyAdmin(env, 'signup', `New user signed up: ${googleUser.name}`, { email: googleUser.email, name: googleUser.name })
+  }
 
   return json({
     user: {
@@ -476,6 +521,9 @@ async function handleBulkSync(request, env, userId) {
     await env.DB.batch(batch)
   }
 
+  const user = await env.DB.prepare('SELECT email FROM users WHERE id = ?').bind(userId).first()
+  notifyAdmin(env, 'design_saved', `Designs synced: ${designs.length} design(s)`, { email: user?.email || '', count: String(designs.length) })
+
   return json({ ok: true, count: batch.length }, 200, request)
 }
 
@@ -495,6 +543,9 @@ async function handleImageUpload(request, env, userId) {
   await env.IMAGES.put(key, file.stream(), {
     httpMetadata: { contentType: file.type || 'image/jpeg' },
   })
+
+  const user = await env.DB.prepare('SELECT email FROM users WHERE id = ?').bind(userId).first()
+  notifyAdmin(env, 'image_uploaded', `Image uploaded by ${user?.email || userId}`, { email: user?.email || '' })
 
   return json({ url: `/images/${key}` }, 200, request)
 }
@@ -518,7 +569,7 @@ async function handleMakePartner(request, env) {
   const { userId, partnerName, partnerType, denomination } = await request.json()
   if (!userId || !partnerName) return error('Missing userId or partnerName', 400, request)
 
-  const user = await env.DB.prepare('SELECT id, is_partner, referral_code FROM users WHERE id = ?').bind(userId).first()
+  const user = await env.DB.prepare('SELECT id, email, name, is_partner, referral_code FROM users WHERE id = ?').bind(userId).first()
   if (!user) return error('User not found', 404, request)
 
   if (user.is_partner && user.referral_code) {
@@ -528,6 +579,8 @@ async function handleMakePartner(request, env) {
   const code = generateReferralCode()
   await env.DB.prepare('UPDATE users SET is_partner = 1, referral_code = ?, partner_name = ?, partner_type = ?, partner_denomination = ? WHERE id = ?')
     .bind(code, partnerName, partnerType || null, denomination || null, userId).run()
+
+  notifyAdmin(env, 'partner_app', `Partner application: ${user.name || user.email}`, { email: user.email, name: user.name || '' })
 
   return json({ ok: true, referralCode: code }, 200, request)
 }
@@ -549,6 +602,8 @@ async function handleTrackReferral(request, env, userId) {
 
   await env.DB.prepare('INSERT INTO referrals (id, partner_id, referred_user_id) VALUES (?, ?, ?)')
     .bind(generateId(), partner.id, userId).run()
+
+  notifyAdmin(env, 'referral_tracked', `Referral tracked: code ${referralCode}`, { referralCode: referralCode || '' })
 
   return json({ ok: true }, 200, request)
 }
@@ -745,6 +800,10 @@ async function handlePaymentVerify(request, env, userId) {
 
   await markOrderPaid(env, order)
   const purchaseData = await getUserPurchaseData(env, userId)
+
+  const user = await env.DB.prepare('SELECT email FROM users WHERE id = ?').bind(userId).first()
+  notifyAdmin(env, 'payment', `Payment completed: GHS ${(order.amount_pesewas / 100).toFixed(2)}`, { email: user?.email || '', plan: order.plan, amount: `GHS ${(order.amount_pesewas / 100).toFixed(2)}`, reference: reference })
+
   return json({ verified: true, ...purchaseData }, 200, request)
 }
 
@@ -781,6 +840,7 @@ async function handlePaymentWebhook(request, env) {
   if (!order) return json({ ok: true }, 200, request)
 
   await markOrderPaid(env, order)
+  notifyAdmin(env, 'payment', `Payment webhook confirmed`, { reference: event.data?.reference || 'unknown' })
   return json({ ok: true }, 200, request)
 }
 
@@ -1008,6 +1068,20 @@ async function handleAdminDemotePartner(request, env) {
   return json({ ok: true }, 200, request)
 }
 
+async function handleAdminSetPartnerType(request, env) {
+  const auth = await requireAdmin(request, env)
+  if (auth.error) return auth.error
+
+  const { userId, partnerType } = await request.json()
+  if (!userId) return error('Missing userId', 400, request)
+
+  const validTypes = [null, 'church', 'funeral_home']
+  if (!validTypes.includes(partnerType)) return error('Invalid partnerType', 400, request)
+
+  await env.DB.prepare('UPDATE users SET partner_type = ? WHERE id = ?').bind(partnerType, userId).run()
+  return json({ ok: true }, 200, request)
+}
+
 async function handleAdminSetCommissionOverride(request, env) {
   const auth = await requireAdmin(request, env)
   if (auth.error) return auth.error
@@ -1082,6 +1156,8 @@ async function handlePrintOrderCreate(request, env, userId) {
     `INSERT INTO print_orders (id, user_id, design_id, product_type, design_name, design_snapshot, quantity, paper_quality, print_size, recipient_name, recipient_phone, delivery_city, delivery_area, delivery_landmark, delivery_region, print_cost_pesewas, delivery_fee_pesewas, total_pesewas, paystack_reference)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(orderId, userId, designId, productType, designName || 'Untitled', snapshotStr, quantity, paperQuality, pricing.size, recipientName, recipientPhone, deliveryCity, deliveryArea || null, deliveryLandmark || null, deliveryRegion, pricing.printCost, pricing.deliveryFee, pricing.total, reference).run()
+
+  notifyAdmin(env, 'print_order', `Print order placed: ${body.productType}`, { email: user.email, product: body.productType, quantity: String(body.quantity || 1), region: body.deliveryRegion || '' })
 
   return json({
     orderId,
@@ -1213,6 +1289,180 @@ async function handleAdminUpdatePrintOrder(request, env, orderId) {
   return json({ ok: true }, 200, request)
 }
 
+// ─── Guest Book handlers ────────────────────────────────────────────────────
+
+async function handleCreateGuestBook(request, env, userId) {
+  const { deceasedName, deceasedPhoto, coverMessage } = await request.json()
+  if (!deceasedName) return error('Missing deceasedName', 400, request)
+
+  const user = await env.DB.prepare('SELECT credits_remaining FROM users WHERE id = ?').bind(userId).first()
+  const credits = user?.credits_remaining ?? 0
+  if (credits === 0) return error('No credits remaining', 403, request)
+
+  const id = generateId()
+  const slug = deceasedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + id.slice(0, 6)
+
+  await env.DB.prepare(
+    'INSERT INTO guest_books (id, user_id, slug, deceased_name, deceased_photo, cover_message) VALUES (?, ?, ?, ?, ?, ?)'
+  ).bind(id, userId, slug, deceasedName, deceasedPhoto || null, coverMessage || null).run()
+
+  if (credits !== -1) {
+    await env.DB.prepare('UPDATE users SET credits_remaining = credits_remaining - 1 WHERE id = ?').bind(userId).run()
+  }
+
+  return json({ id, slug }, 201, request)
+}
+
+async function handleGetGuestBook(request, env, slug) {
+  const book = await env.DB.prepare('SELECT * FROM guest_books WHERE slug = ? AND is_active = 1').bind(slug).first()
+  if (!book) return error('Guest book not found', 404, request)
+
+  const entries = await env.DB.prepare('SELECT id, name, message, photo_url, created_at FROM guest_entries WHERE book_id = ? ORDER BY created_at DESC').bind(book.id).all()
+
+  return json({ book, entries: entries.results }, 200, request)
+}
+
+async function handleSignGuestBook(request, env, slug) {
+  const book = await env.DB.prepare('SELECT id, is_active FROM guest_books WHERE slug = ?').bind(slug).first()
+  if (!book || !book.is_active) return error('Guest book not found or closed', 404, request)
+
+  const { name, message, photoUrl } = await request.json()
+  if (!name) return error('Name is required', 400, request)
+
+  const id = generateId()
+  await env.DB.prepare(
+    'INSERT INTO guest_entries (id, book_id, name, message, photo_url) VALUES (?, ?, ?, ?, ?)'
+  ).bind(id, book.id, name, message || null, photoUrl || null).run()
+
+  notifyAdmin(env, 'guest_book_sign', `Guest book signed: ${name}`, { guestBookSlug: slug, signerName: name, message: (message || '').slice(0, 100) })
+
+  return json({ id }, 201, request)
+}
+
+async function handleListUserGuestBooks(request, env, userId) {
+  const rows = await env.DB.prepare(
+    'SELECT gb.id, gb.slug, gb.deceased_name, gb.created_at, (SELECT COUNT(*) FROM guest_entries WHERE book_id = gb.id) as entry_count FROM guest_books gb WHERE gb.user_id = ? ORDER BY gb.created_at DESC'
+  ).bind(userId).all()
+  return json({ books: rows.results }, 200, request)
+}
+
+// ─── Obituary Page handlers ─────────────────────────────────────────────────
+
+async function handleCreateObituary(request, env, userId) {
+  const { deceasedName, deceasedPhoto, birthDate, deathDate, biography, funeralDate, funeralTime, funeralVenue, venueAddress, familyMembers } = await request.json()
+  if (!deceasedName) return error('Missing deceasedName', 400, request)
+
+  const user = await env.DB.prepare('SELECT email, credits_remaining FROM users WHERE id = ?').bind(userId).first()
+  const credits = user?.credits_remaining ?? 0
+  if (credits === 0) return error('No credits remaining', 403, request)
+
+  const id = generateId()
+  const slug = deceasedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + id.slice(0, 6)
+
+  await env.DB.prepare(
+    'INSERT INTO obituary_pages (id, user_id, slug, deceased_name, deceased_photo, birth_date, death_date, biography, funeral_date, funeral_time, funeral_venue, venue_address, family_members) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(id, userId, slug, deceasedName, deceasedPhoto || null, birthDate || null, deathDate || null, biography || null, funeralDate || null, funeralTime || null, funeralVenue || null, venueAddress || null, familyMembers || null).run()
+
+  if (credits !== -1) {
+    await env.DB.prepare('UPDATE users SET credits_remaining = credits_remaining - 1 WHERE id = ?').bind(userId).run()
+  }
+
+  notifyAdmin(env, 'obituary_created', `Obituary created: ${deceasedName || 'Untitled'}`, { email: user?.email || '', name: deceasedName || '' })
+
+  return json({ id, slug }, 201, request)
+}
+
+async function handleGetObituary(request, env, slug) {
+  const page = await env.DB.prepare('SELECT * FROM obituary_pages WHERE slug = ? AND is_active = 1').bind(slug).first()
+  if (!page) return error('Obituary not found', 404, request)
+  return json({ obituary: page }, 200, request)
+}
+
+async function handleUpdateObituary(request, env, userId, id) {
+  const fields = await request.json()
+  const allowed = ['deceased_name', 'deceased_photo', 'birth_date', 'death_date', 'biography', 'funeral_date', 'funeral_time', 'funeral_venue', 'venue_address', 'family_members', 'is_active']
+  const updates = []
+  const vals = []
+  for (const key of allowed) {
+    if (fields[key] !== undefined) { updates.push(`${key} = ?`); vals.push(fields[key]) }
+  }
+  if (updates.length === 0) return error('No fields to update', 400, request)
+  await env.DB.prepare(`UPDATE obituary_pages SET ${updates.join(', ')} WHERE id = ? AND user_id = ?`).bind(...vals, id, userId).run()
+  return json({ ok: true }, 200, request)
+}
+
+async function handleListUserObituaries(request, env, userId) {
+  const rows = await env.DB.prepare('SELECT id, slug, deceased_name, funeral_date, created_at FROM obituary_pages WHERE user_id = ? ORDER BY created_at DESC').bind(userId).all()
+  return json({ obituaries: rows.results }, 200, request)
+}
+
+// ─── Photo Gallery handlers ─────────────────────────────────────────────────
+
+async function handleCreateGallery(request, env, userId) {
+  const { title, deceasedName, description } = await request.json()
+  if (!title) return error('Missing title', 400, request)
+
+  const user = await env.DB.prepare('SELECT email, credits_remaining FROM users WHERE id = ?').bind(userId).first()
+  const credits = user?.credits_remaining ?? 0
+  if (credits === 0) return error('No credits remaining', 403, request)
+
+  const id = generateId()
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + id.slice(0, 6)
+
+  await env.DB.prepare(
+    'INSERT INTO photo_galleries (id, user_id, slug, title, deceased_name, description) VALUES (?, ?, ?, ?, ?, ?)'
+  ).bind(id, userId, slug, title, deceasedName || null, description || null).run()
+
+  if (credits !== -1) {
+    await env.DB.prepare('UPDATE users SET credits_remaining = credits_remaining - 1 WHERE id = ?').bind(userId).run()
+  }
+
+  notifyAdmin(env, 'gallery_created', `Gallery created: ${title || 'Untitled'}`, { email: user?.email || '', title: title || '' })
+
+  return json({ id, slug }, 201, request)
+}
+
+async function handleGetGallery(request, env, slug) {
+  const gallery = await env.DB.prepare('SELECT * FROM photo_galleries WHERE slug = ? AND is_active = 1').bind(slug).first()
+  if (!gallery) return error('Gallery not found', 404, request)
+
+  const photos = await env.DB.prepare('SELECT id, photo_url, caption, sort_order FROM gallery_photos WHERE gallery_id = ? ORDER BY sort_order ASC').bind(gallery.id).all()
+
+  return json({ gallery, photos: photos.results }, 200, request)
+}
+
+async function handleAddGalleryPhoto(request, env, userId, galleryId) {
+  const gallery = await env.DB.prepare('SELECT id FROM photo_galleries WHERE id = ? AND user_id = ?').bind(galleryId, userId).first()
+  if (!gallery) return error('Gallery not found', 404, request)
+
+  const { photoUrl, caption, sortOrder } = await request.json()
+  if (!photoUrl) return error('Missing photoUrl', 400, request)
+
+  const id = generateId()
+  await env.DB.prepare(
+    'INSERT INTO gallery_photos (id, gallery_id, photo_url, caption, sort_order) VALUES (?, ?, ?, ?, ?)'
+  ).bind(id, galleryId, photoUrl, caption || null, sortOrder || 0).run()
+
+  return json({ id }, 201, request)
+}
+
+async function handleDeleteGalleryPhoto(request, env, userId, photoId) {
+  const photo = await env.DB.prepare(
+    'SELECT gp.id FROM gallery_photos gp JOIN photo_galleries pg ON gp.gallery_id = pg.id WHERE gp.id = ? AND pg.user_id = ?'
+  ).bind(photoId, userId).first()
+  if (!photo) return error('Photo not found', 404, request)
+
+  await env.DB.prepare('DELETE FROM gallery_photos WHERE id = ?').bind(photoId).run()
+  return json({ ok: true }, 200, request)
+}
+
+async function handleListUserGalleries(request, env, userId) {
+  const rows = await env.DB.prepare(
+    'SELECT pg.id, pg.slug, pg.title, pg.deceased_name, pg.created_at, (SELECT COUNT(*) FROM gallery_photos WHERE gallery_id = pg.id) as photo_count FROM photo_galleries pg WHERE pg.user_id = ? ORDER BY pg.created_at DESC'
+  ).bind(userId).all()
+  return json({ galleries: rows.results }, 200, request)
+}
+
 // ─── Router ─────────────────────────────────────────────────────────────────
 
 export default {
@@ -1235,6 +1485,16 @@ export default {
       const publicPartnerMatch = method === 'GET' && path.match(/^\/partner\/public\/([^/]+)$/)
       if (publicPartnerMatch) return await handlePublicPartnerPage(request, env, publicPartnerMatch[1])
 
+      // Public guest book, obituary, gallery
+      const guestBookMatch = method === 'GET' && path.match(/^\/guest-book\/([^/]+)$/)
+      if (guestBookMatch) return await handleGetGuestBook(request, env, guestBookMatch[1])
+      const guestSignMatch = method === 'POST' && path.match(/^\/guest-book\/([^/]+)\/sign$/)
+      if (guestSignMatch) return await handleSignGuestBook(request, env, guestSignMatch[1])
+      const obituaryMatch = method === 'GET' && path.match(/^\/obituary\/([^/]+)$/)
+      if (obituaryMatch) return await handleGetObituary(request, env, obituaryMatch[1])
+      const galleryMatch = method === 'GET' && path.match(/^\/gallery\/([^/]+)$/)
+      if (galleryMatch) return await handleGetGallery(request, env, galleryMatch[1])
+
       // Admin routes (no JWT, uses X-Admin-Secret)
       if (method === 'POST' && path === '/admin/make-partner') return await handleMakePartner(request, env)
 
@@ -1248,10 +1508,51 @@ export default {
         if (method === 'POST' && path === '/admin/partners/promote') return await handleAdminPromotePartner(request, env)
         if (method === 'POST' && path === '/admin/partners/demote') return await handleAdminDemotePartner(request, env)
         if (method === 'POST' && path === '/admin/partners/commission-override') return await handleAdminSetCommissionOverride(request, env)
+        if (method === 'POST' && path === '/admin/partners/set-type') return await handleAdminSetPartnerType(request, env)
         if (method === 'GET' && path === '/admin/designs') return await handleAdminDesigns(request, env)
         if (method === 'GET' && path === '/admin/print-orders') return await handleAdminPrintOrders(request, env)
         const adminPrintMatch = path.match(/^\/admin\/print-orders\/([^/]+)$/)
         if (adminPrintMatch && method === 'PUT') return await handleAdminUpdatePrintOrder(request, env, adminPrintMatch[1])
+
+        // Admin notifications
+        if (method === 'GET' && path === '/admin/notifications') {
+          const user = await authenticate(request, env)
+          if (!user || !SUPER_ADMINS.includes(user.email)) return error('Forbidden', 403, request)
+          const notifUrl = new URL(request.url)
+          const limit = parseInt(notifUrl.searchParams.get('limit') || '50')
+          const offset = parseInt(notifUrl.searchParams.get('offset') || '0')
+          const typeFilter = notifUrl.searchParams.get('type') || ''
+
+          let query = 'SELECT * FROM admin_notifications'
+          const params = []
+          if (typeFilter) {
+            query += ' WHERE type = ?'
+            params.push(typeFilter)
+          }
+          query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
+          params.push(limit, offset)
+
+          const { results } = await env.DB.prepare(query).bind(...params).all()
+          const { results: countResult } = await env.DB.prepare(
+            'SELECT COUNT(*) as count FROM admin_notifications WHERE is_read = 0'
+          ).all()
+
+          return json({ notifications: results, unreadCount: countResult[0].count }, 200, request)
+        }
+
+        if (method === 'POST' && path === '/admin/notifications/read') {
+          const user = await authenticate(request, env)
+          if (!user || !SUPER_ADMINS.includes(user.email)) return error('Forbidden', 403, request)
+          const body = await request.json()
+
+          if (body.all) {
+            await env.DB.prepare('UPDATE admin_notifications SET is_read = 1 WHERE is_read = 0').run()
+          } else if (body.id) {
+            await env.DB.prepare('UPDATE admin_notifications SET is_read = 1 WHERE id = ?').bind(body.id).run()
+          }
+
+          return json({ ok: true }, 200, request)
+        }
       }
 
       // Authenticated routes
@@ -1277,6 +1578,24 @@ export default {
       if (method === 'GET' && path === '/designs') return await handleListDesigns(request, env, userId)
       if (method === 'POST' && path === '/designs/sync') return await handleBulkSync(request, env, userId)
       if (method === 'POST' && path === '/images/upload') return await handleImageUpload(request, env, userId)
+
+      // Guest books
+      if (method === 'POST' && path === '/guest-books/create') return await handleCreateGuestBook(request, env, userId)
+      if (method === 'GET' && path === '/guest-books') return await handleListUserGuestBooks(request, env, userId)
+
+      // Obituary pages
+      if (method === 'POST' && path === '/obituaries/create') return await handleCreateObituary(request, env, userId)
+      if (method === 'GET' && path === '/obituaries') return await handleListUserObituaries(request, env, userId)
+      const obituaryUpdateMatch = path.match(/^\/obituaries\/([^/]+)$/)
+      if (obituaryUpdateMatch && method === 'PUT') return await handleUpdateObituary(request, env, userId, obituaryUpdateMatch[1])
+
+      // Photo galleries
+      if (method === 'POST' && path === '/galleries/create') return await handleCreateGallery(request, env, userId)
+      if (method === 'GET' && path === '/galleries') return await handleListUserGalleries(request, env, userId)
+      const galleryPhotoMatch = path.match(/^\/galleries\/([^/]+)\/photos$/)
+      if (galleryPhotoMatch && method === 'POST') return await handleAddGalleryPhoto(request, env, userId, galleryPhotoMatch[1])
+      const galleryPhotoDeleteMatch = path.match(/^\/gallery-photos\/([^/]+)$/)
+      if (galleryPhotoDeleteMatch && method === 'DELETE') return await handleDeleteGalleryPhoto(request, env, userId, galleryPhotoDeleteMatch[1])
 
       // Design CRUD with :id
       const designMatch = path.match(/^\/designs\/([^/]+)$/)

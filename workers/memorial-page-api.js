@@ -9,7 +9,8 @@
  * 2. Create Worker named "brochure-memorial-api"
  * 3. Bind KV namespace: MEMORIAL_PAGES_KV -> MEMORIAL_PAGES
  * 4. Deploy this code
- * 5. Bind D1 database: DB -> funeralpress-db (for tweet queue)
+ * 5. Bind D1 database: DB -> funeralpress-db (for tweet queue + notifications)
+ * 6. Set secret: RESEND_API_KEY (for admin email notifications)
  */
 
 const corsHeaders = {
@@ -26,6 +27,39 @@ function generateId() {
     id += chars[Math.floor(Math.random() * chars.length)]
   }
   return id
+}
+
+const ADMIN_EMAIL = 'oh84dev@funeralpress.org'
+
+async function notifyAdmin(env, type, title, detail = {}) {
+  if (env.DB) {
+    try {
+      await env.DB.prepare(
+        `INSERT INTO admin_notifications (type, title, detail) VALUES (?, ?, ?)`
+      ).bind(type, title, JSON.stringify(detail)).run()
+    } catch (e) {
+      console.error('Notification insert failed:', e.message)
+    }
+  }
+  if (env.RESEND_API_KEY) {
+    try {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'FuneralPress <notifications@funeralpress.org>',
+          to: [ADMIN_EMAIL],
+          subject: `[FuneralPress] ${title}`,
+          text: `${title}\n\nDetails:\n${Object.entries(detail).map(([k, v]) => `  ${k}: ${v}`).join('\n')}\n\nTime: ${new Date().toISOString()}\n\nView dashboard: https://funeralpress.org/admin`,
+        }),
+      })
+    } catch (e) {
+      console.error('Resend email failed:', e.message)
+    }
+  }
 }
 
 async function handlePost(request, env) {
@@ -69,6 +103,12 @@ async function handlePost(request, env) {
         console.error('Tweet queue insert failed:', e.message)
       }
     }
+
+    // Notify admin
+    notifyAdmin(env, 'memorial_created', `Memorial page created: ${body.fullName}`, {
+      name: body.fullName,
+      url: `https://funeralpress.org/memorial/${id}`,
+    })
 
     return new Response(JSON.stringify({ id, url: `https://funeralpress.org/memorial/${id}` }), {
       status: 200,
