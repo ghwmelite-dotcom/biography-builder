@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1100" width="800" height="1100">
+  <defs>
+    <linearGradient id="owBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1A3A5C"/>
+      <stop offset="50%" stop-color="#15305A"/>
+      <stop offset="100%" stop-color="#0E2240"/>
+    </linearGradient>
+    <linearGradient id="owLight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#87CEEB" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </linearGradient>
+    <radialGradient id="owGlow" cx="50%" cy="25%" r="50%">
+      <stop offset="0%" stop-color="#2A5A8C" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+    <linearGradient id="owSkyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#87CEEB" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#1A3A5C" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="owShadow">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+    <filter id="owTextGlow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="owSoftShadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0A1A30" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Background gradient -->
+  <rect width="800" height="1100" fill="url(#owBg)"/>
+  <rect width="800" height="1100" fill="url(#owGlow)"/>
+  <rect width="800" height="400" fill="url(#owSkyGrad)"/>
+
+  <!-- Wave decorative elements - top -->
+  <g opacity="0.12">
+    <path d="M0,120 Q100,80 200,120 Q300,160 400,120 Q500,80 600,120 Q700,160 800,120 L800,0 L0,0 Z" fill="#87CEEB"/>
+  </g>
+  <g opacity="0.08">
+    <path d="M0,150 Q100,110 200,150 Q300,190 400,150 Q500,110 600,150 Q700,190 800,150 L800,0 L0,0 Z" fill="#87CEEB"/>
+  </g>
+
+  <!-- Thin border -->
+  <rect x="40" y="40" width="720" height="1020" rx="4" fill="none" stroke="#87CEEB" stroke-width="0.8" opacity="0.2"/>
+  <rect x="48" y="48" width="704" height="1004" rx="3" fill="none" stroke="#87CEEB" stroke-width="0.3" opacity="0.15"/>
+
+  <!-- Small cross -->
+  <g transform="translate(400, 120)">
+    <rect x="-2" y="-18" width="4" height="36" rx="1" fill="#87CEEB" opacity="0.4"/>
+    <rect x="-12" y="-8" width="24" height="4" rx="1" fill="#87CEEB" opacity="0.4"/>
+  </g>
+
+  <!-- Heading -->
+  <text x="400" y="200" text-anchor="middle" font-family="Georgia, 'Palatino Linotype', serif" font-size="14" fill="#87CEEB" letter-spacing="6" opacity="0.6">CELEBRATING A LIFE WELL LIVED</text>
+
+  <!-- Decorative divider -->
+  <g transform="translate(400, 225)">
+    <line x1="-120" y1="0" x2="-10" y2="0" stroke="#87CEEB" stroke-width="0.5" opacity="0.3"/>
+    <line x1="10" y1="0" x2="120" y2="0" stroke="#87CEEB" stroke-width="0.5" opacity="0.3"/>
+    <circle cx="0" cy="0" r="2" fill="#87CEEB" opacity="0.3"/>
+  </g>
+
+  <!-- "One Week Celebration" heading -->
+  <g filter="url(#owTextGlow)">
+    <text x="400" y="300" text-anchor="middle" font-family="Georgia, 'Palatino Linotype', serif" font-size="44" fill="#FFFFFF">One Week</text>
+    <text x="400" y="355" text-anchor="middle" font-family="Georgia, 'Palatino Linotype', serif" font-size="44" fill="#FFFFFF">Celebration</text>
+  </g>
+
+  <!-- Wave divider element -->
+  <g transform="translate(400, 395)">
+    <path d="M-180,0 Q-135,-18 -90,0 Q-45,18 0,0 Q45,-18 90,0 Q135,18 180,0" fill="none" stroke="#87CEEB" stroke-width="1.5" opacity="0.4"/>
+    <path d="M-150,8 Q-112,-8 -75,8 Q-37,-8 0,8 Q37,-8 75,8 Q112,-8 150,8" fill="none" stroke="#87CEEB" stroke-width="0.8" opacity="0.2"/>
+  </g>
+
+  <!-- In memory of -->
+  <text x="400" y="460" text-anchor="middle" font-family="Georgia, serif" font-size="13" fill="#87CEEB" opacity="0.6" letter-spacing="3">IN LOVING MEMORY OF</text>
+
+  <!-- Name -->
+  <text x="400" y="520" text-anchor="middle" font-family="Georgia, 'Palatino Linotype', serif" font-size="36" fill="#FFFFFF" filter="url(#owSoftShadow)" font-weight="bold">Grace Amara Johnson</text>
+
+  <!-- Dates -->
+  <text x="400" y="560" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#87CEEB" opacity="0.7" letter-spacing="2">March 12, 1950 — January 8, 2025</text>
+
+  <!-- Wave divider -->
+  <g transform="translate(400, 600)">
+    <path d="M-120,0 Q-90,-10 -60,0 Q-30,10 0,0 Q30,-10 60,0 Q90,10 120,0" fill="none" stroke="#87CEEB" stroke-width="0.8" opacity="0.3"/>
+  </g>
+
+  <!-- Event details -->
+  <text x="400" y="650" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#87CEEB" opacity="0.5" letter-spacing="4">EVENT DETAILS</text>
+
+  <text x="400" y="690" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#FFFFFF" opacity="0.9">Saturday, January 25, 2025</text>
+  <text x="400" y="718" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#FFFFFF" opacity="0.9">11:00 AM — 4:00 PM</text>
+
+  <!-- Divider -->
+  <g transform="translate(400, 745)">
+    <line x1="-80" y1="0" x2="-5" y2="0" stroke="#87CEEB" stroke-width="0.4" opacity="0.2"/>
+    <line x1="5" y1="0" x2="80" y2="0" stroke="#87CEEB" stroke-width="0.4" opacity="0.2"/>
+    <path d="M-4,-3 L0,3 L4,-3" fill="none" stroke="#87CEEB" stroke-width="0.4" opacity="0.3"/>
+  </g>
+
+  <text x="400" y="780" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#FFFFFF" opacity="0.8">Grace Community Chapel</text>
+  <text x="400" y="805" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#87CEEB" opacity="0.5">123 Peaceful Lane, Accra, Ghana</text>
+
+  <!-- Scripture -->
+  <g transform="translate(400, 855)">
+    <line x1="-100" y1="0" x2="-5" y2="0" stroke="#87CEEB" stroke-width="0.4" opacity="0.2"/>
+    <line x1="5" y1="0" x2="100" y2="0" stroke="#87CEEB" stroke-width="0.4" opacity="0.2"/>
+    <circle cx="0" cy="0" r="1.5" fill="#87CEEB" opacity="0.2"/>
+  </g>
+
+  <text x="400" y="895" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#FFFFFF" font-style="italic" opacity="0.7">"To be absent from the body is to be</text>
+  <text x="400" y="918" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#FFFFFF" font-style="italic" opacity="0.7">present with the Lord."</text>
+  <text x="400" y="945" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#87CEEB" opacity="0.4" letter-spacing="2">— 2 CORINTHIANS 5:8</text>
+
+  <!-- Bottom wave decoration -->
+  <g opacity="0.1">
+    <path d="M0,980 Q100,960 200,980 Q300,1000 400,980 Q500,960 600,980 Q700,1000 800,980 L800,1100 L0,1100 Z" fill="#87CEEB"/>
+  </g>
+  <g opacity="0.06">
+    <path d="M0,1000 Q100,980 200,1000 Q300,1020 400,1000 Q500,980 600,1000 Q700,1020 800,1000 L800,1100 L0,1100 Z" fill="#87CEEB"/>
+  </g>
+
+  <!-- Family -->
+  <text x="400" y="990" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#87CEEB" opacity="0.5">The Johnson Family cordially invites you</text>
+
+  <!-- Watermark -->
+  <text x="400" y="1070" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#FFFFFF" opacity="0.2" letter-spacing="4">FUNERALPRESS</text>
+</svg>

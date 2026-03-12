@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1100" width="800" height="1100">
+  <defs>
+    <linearGradient id="posterBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a3a6e"/>
+      <stop offset="60%" stop-color="#122a52"/>
+      <stop offset="100%" stop-color="#0D1F3C"/>
+    </linearGradient>
+    <linearGradient id="pGold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E0C56C"/>
+      <stop offset="50%" stop-color="#C9A84C"/>
+      <stop offset="100%" stop-color="#A88A3A"/>
+    </linearGradient>
+    <radialGradient id="photoCircleBg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2A4A7E"/>
+      <stop offset="100%" stop-color="#1a3a6e"/>
+    </radialGradient>
+    <filter id="pShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+    <filter id="pGlow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="textShadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="1100" fill="url(#posterBg)"/>
+
+  <!-- Subtle texture overlay -->
+  <rect width="800" height="1100" fill="url(#posterBg)" opacity="0.5"/>
+  <radialGradient id="pLight" cx="50%" cy="30%" r="50%">
+    <stop offset="0%" stop-color="#2A5090" stop-opacity="0.3"/>
+    <stop offset="100%" stop-color="transparent"/>
+  </radialGradient>
+  <rect width="800" height="1100" fill="url(#pLight)"/>
+
+  <!-- Decorative gold frame - outer -->
+  <rect x="40" y="40" width="720" height="1020" rx="4" fill="none" stroke="url(#pGold)" stroke-width="2"/>
+  <!-- Inner frame -->
+  <rect x="52" y="52" width="696" height="996" rx="3" fill="none" stroke="url(#pGold)" stroke-width="0.8"/>
+
+  <!-- Corner ornaments -->
+  <g fill="none" stroke="#C9A84C" stroke-width="1.2">
+    <!-- Top left -->
+    <path d="M55,85 Q55,55 85,55"/>
+    <path d="M55,75 Q55,65 65,55" stroke-width="0.6"/>
+    <circle cx="58" cy="58" r="3" fill="#C9A84C" stroke="none"/>
+    <!-- Top right -->
+    <path d="M745,85 Q745,55 715,55"/>
+    <path d="M745,75 Q745,65 735,55" stroke-width="0.6"/>
+    <circle cx="742" cy="58" r="3" fill="#C9A84C" stroke="none"/>
+    <!-- Bottom left -->
+    <path d="M55,1015 Q55,1045 85,1045"/>
+    <path d="M55,1025 Q55,1035 65,1045" stroke-width="0.6"/>
+    <circle cx="58" cy="1042" r="3" fill="#C9A84C" stroke="none"/>
+    <!-- Bottom right -->
+    <path d="M745,1015 Q745,1045 715,1045"/>
+    <path d="M745,1025 Q745,1035 735,1045" stroke-width="0.6"/>
+    <circle cx="742" cy="1042" r="3" fill="#C9A84C" stroke="none"/>
+  </g>
+
+  <!-- Top ornamental divider -->
+  <g transform="translate(400, 110)">
+    <line x1="-200" y1="0" x2="-20" y2="0" stroke="#C9A84C" stroke-width="0.8"/>
+    <line x1="20" y1="0" x2="200" y2="0" stroke="#C9A84C" stroke-width="0.8"/>
+    <path d="M-15,-8 L0,0 L15,-8" fill="none" stroke="#C9A84C" stroke-width="0.8"/>
+    <path d="M-15,8 L0,0 L15,8" fill="none" stroke="#C9A84C" stroke-width="0.8"/>
+  </g>
+
+  <!-- Header text -->
+  <text x="400" y="95" text-anchor="middle" font-family="Georgia, 'Palatino Linotype', serif" font-size="14" fill="#C9A84C" letter-spacing="6" opacity="0.8">OBITUARY</text>
+
+  <!-- Cross -->
+  <g transform="translate(400, 160)" filter="url(#pGlow)">
+    <rect x="-2.5" y="-20" width="5" height="40" rx="1" fill="#C9A84C"/>
+    <rect x="-14" y="-10" width="28" height="5" rx="1" fill="#C9A84C"/>
+  </g>
+
+  <!-- Photo placeholder circle -->
+  <g filter="url(#pShadow)">
+    <circle cx="400" cy="300" r="95" fill="none" stroke="url(#pGold)" stroke-width="3"/>
+    <circle cx="400" cy="300" r="88" fill="url(#photoCircleBg)"/>
+    <circle cx="400" cy="300" r="88" fill="none" stroke="#C9A84C" stroke-width="0.5" opacity="0.5"/>
+    <!-- Initials -->
+    <text x="400" y="290" text-anchor="middle" font-family="Georgia, 'Palatino Linotype', serif" font-size="44" fill="#C9A84C" opacity="0.6" font-style="italic">G</text>
+    <text x="375" y="325" text-anchor="middle" font-family="Georgia, serif" font-size="28" fill="#C9A84C" opacity="0.4" font-style="italic">A</text>
+    <text x="428" y="325" text-anchor="middle" font-family="Georgia, serif" font-size="28" fill="#C9A84C" opacity="0.4" font-style="italic">J</text>
+  </g>
+
+  <!-- Gold divider -->
+  <g transform="translate(400, 420)">
+    <line x1="-180" y1="0" x2="-10" y2="0" stroke="#C9A84C" stroke-width="0.6"/>
+    <line x1="10" y1="0" x2="180" y2="0" stroke="#C9A84C" stroke-width="0.6"/>
+    <path d="M-8,0 L0,-6 L8,0 L0,6 Z" fill="#C9A84C" opacity="0.7"/>
+  </g>
+
+  <!-- Name -->
+  <text x="400" y="475" text-anchor="middle" font-family="Georgia, 'Palatino Linotype', serif" font-size="36" fill="#FFFFFF" filter="url(#textShadow)" font-weight="bold">Grace Amara Johnson</text>
+
+  <!-- Dates -->
+  <text x="400" y="515" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#C9A84C" letter-spacing="3">March 12, 1950 — January 8, 2025</text>
+
+  <!-- Gold divider -->
+  <g transform="translate(400, 545)">
+    <line x1="-120" y1="0" x2="-5" y2="0" stroke="#C9A84C" stroke-width="0.6"/>
+    <line x1="5" y1="0" x2="120" y2="0" stroke="#C9A84C" stroke-width="0.6"/>
+    <circle cx="0" cy="0" r="3" fill="#C9A84C" opacity="0.5"/>
+  </g>
+
+  <!-- Funeral venue details -->
+  <text x="400" y="590" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#BBCCEE" font-style="italic">Funeral Service</text>
+  <text x="400" y="618" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#8899BB">Saturday, January 18, 2025 at 10:00 AM</text>
+  <text x="400" y="642" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#8899BB">Grace Community Chapel</text>
+  <text x="400" y="662" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#7788AA">123 Peaceful Lane, Accra, Ghana</text>
+
+  <!-- Gold divider -->
+  <g transform="translate(400, 700)">
+    <line x1="-150" y1="0" x2="-10" y2="0" stroke="#C9A84C" stroke-width="0.5"/>
+    <line x1="10" y1="0" x2="150" y2="0" stroke="#C9A84C" stroke-width="0.5"/>
+    <path d="M-8,-4 Q0,4 8,-4" fill="none" stroke="#C9A84C" stroke-width="0.6"/>
+  </g>
+
+  <!-- Scripture quote -->
+  <text x="400" y="745" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#FFFFFF" font-style="italic" opacity="0.9">"The Lord is my shepherd; I shall not want.</text>
+  <text x="400" y="770" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#FFFFFF" font-style="italic" opacity="0.9">He maketh me to lie down in green pastures:</text>
+  <text x="400" y="795" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#FFFFFF" font-style="italic" opacity="0.9">He leadeth me beside the still waters."</text>
+  <text x="400" y="830" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#C9A84C" letter-spacing="2">— PSALM 23:1-2</text>
+
+  <!-- Bottom ornamental divider -->
+  <g transform="translate(400, 870)">
+    <line x1="-200" y1="0" x2="-20" y2="0" stroke="#C9A84C" stroke-width="0.6"/>
+    <line x1="20" y1="0" x2="200" y2="0" stroke="#C9A84C" stroke-width="0.6"/>
+    <path d="M-12,0 Q-6,-8 0,0 Q6,-8 12,0" fill="none" stroke="#C9A84C" stroke-width="0.8"/>
+    <path d="M-8,0 Q-4,6 0,0 Q4,6 8,0" fill="none" stroke="#C9A84C" stroke-width="0.6"/>
+  </g>
+
+  <!-- Tribute line -->
+  <text x="400" y="920" text-anchor="middle" font-family="Georgia, serif" font-size="13" fill="#BBCCEE" font-style="italic">"A life beautifully lived, a heart deeply loved."</text>
+
+  <!-- Family -->
+  <text x="400" y="960" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#7788AA">Lovingly remembered by the Johnson Family</text>
+
+  <!-- Bottom decorative -->
+  <g transform="translate(400, 1000)">
+    <path d="M-40,0 Q-20,-8 0,0 Q20,-8 40,0" fill="none" stroke="#C9A84C" stroke-width="0.5" opacity="0.4"/>
+  </g>
+
+  <!-- Watermark -->
+  <text x="400" y="1060" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#C9A84C" opacity="0.3" letter-spacing="4">FUNERALPRESS</text>
+</svg>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>One Week Celebration — Grace Amara Johnson | One Week Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:linear-gradient(135deg,#0a1f33,#0e2a44,#0a1f33);
+    font-family:'Cormorant Garamond',serif;
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:40px 20px;
+  }
+  h1,h2,h3{font-family:'Playfair Display',serif}
+
+  @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes waveMotion{0%{transform:translateX(-20px)}50%{transform:translateX(20px)}100%{transform:translateX(-20px)}}
+  @keyframes waveMotion2{0%{transform:translateX(15px)}50%{transform:translateX(-15px)}100%{transform:translateX(15px)}}
+  @keyframes shimmer{0%{opacity:0.3}50%{opacity:0.6}100%{opacity:0.3}}
+
+  .poster{
+    width:800px;max-width:100%;min-height:1100px;
+    background:linear-gradient(175deg,#0d2240 0%,#1A3A5C 20%,#1f4266 50%,#1A3A5C 80%,#0d2240 100%);
+    position:relative;overflow:hidden;
+    animation:fadeIn .8s ease-out both;
+    box-shadow:0 20px 60px rgba(0,0,0,0.4);
+  }
+
+  /* Wave decorative elements */
+  .wave{position:absolute;width:150%;left:-25%;height:100px;z-index:1;opacity:0.08;pointer-events:none}
+  .wave-1{
+    top:60px;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 100'%3E%3Cpath d='M0,50 Q150,0 300,50 T600,50 T900,50 T1200,50' fill='none' stroke='%2387CEEB' stroke-width='2'/%3E%3C/svg%3E") repeat-x;
+    animation:waveMotion 8s ease-in-out infinite;
+  }
+  .wave-2{
+    top:80px;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 100'%3E%3Cpath d='M0,50 Q150,100 300,50 T600,50 T900,50 T1200,50' fill='none' stroke='%2387CEEB' stroke-width='1.5'/%3E%3C/svg%3E") repeat-x;
+    animation:waveMotion2 10s ease-in-out infinite;
+  }
+  .wave-3{
+    bottom:60px;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 100'%3E%3Cpath d='M0,50 Q150,0 300,50 T600,50 T900,50 T1200,50' fill='none' stroke='%2387CEEB' stroke-width='2'/%3E%3C/svg%3E") repeat-x;
+    animation:waveMotion 9s ease-in-out infinite;
+  }
+  .wave-4{
+    bottom:40px;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 100'%3E%3Cpath d='M0,50 Q150,100 300,50 T600,50 T900,50 T1200,50' fill='none' stroke='%2387CEEB' stroke-width='1'/%3E%3C/svg%3E") repeat-x;
+    animation:waveMotion2 11s ease-in-out infinite;
+  }
+
+  /* Borders */
+  .border-outer{position:absolute;inset:10px;border:2px solid rgba(135,206,235,0.3);pointer-events:none;z-index:2}
+  .border-inner{position:absolute;inset:16px;border:1px solid rgba(135,206,235,0.12);pointer-events:none;z-index:2}
+
+  /* Corner wave accents */
+  .wave-corner{position:absolute;width:80px;height:80px;z-index:3;overflow:hidden}
+  .wc-tl{top:16px;left:16px}
+  .wc-tr{top:16px;right:16px;transform:scaleX(-1)}
+  .wc-bl{bottom:16px;left:16px;transform:scaleY(-1)}
+  .wc-br{bottom:16px;right:16px;transform:scale(-1)}
+  .wave-corner::before{
+    content:'';position:absolute;top:0;left:0;
+    width:60px;height:60px;
+    border-top:1px solid rgba(135,206,235,0.4);
+    border-left:1px solid rgba(135,206,235,0.4);
+    border-top-left-radius:0;
+  }
+  .wave-corner::after{
+    content:'';position:absolute;top:8px;left:8px;
+    width:40px;height:40px;
+    border-top:1px solid rgba(135,206,235,0.2);
+    border-left:1px solid rgba(135,206,235,0.2);
+  }
+
+  .content{position:relative;z-index:4;display:flex;flex-direction:column;align-items:center;padding:56px 52px;min-height:1100px;justify-content:center}
+
+  /* Decorative circles like water ripples */
+  .ripple-deco{position:relative;width:60px;height:60px;margin-bottom:8px}
+  .ripple-deco::before{content:'';position:absolute;inset:0;border-radius:50%;border:1px solid rgba(135,206,235,0.3);animation:shimmer 3s ease-in-out infinite}
+  .ripple-deco::after{content:'';position:absolute;inset:8px;border-radius:50%;border:1px solid rgba(135,206,235,0.2);animation:shimmer 3s ease-in-out 0.5s infinite}
+  .ripple-center{position:absolute;inset:16px;border-radius:50%;border:1px solid rgba(135,206,235,0.15)}
+
+  .celebration-label{font-size:13px;color:#87CEEB;letter-spacing:10px;text-transform:uppercase}
+  .one-week{font-family:'Playfair Display',serif;font-size:48px;font-weight:700;color:#87CEEB;letter-spacing:4px;text-align:center;line-height:1.2;margin-top:4px}
+  .celebration-sub{font-size:16px;color:rgba(135,206,235,0.6);letter-spacing:6px;text-transform:uppercase;margin-top:4px}
+
+  .divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:rgba(135,206,235,0.4);font-size:10px}
+  .divider::before,.divider::after{content:'';width:80px;height:1px;background:linear-gradient(90deg,transparent,rgba(135,206,235,0.3),transparent)}
+  .divider-wave::before,.divider-wave::after{
+    content:'';width:100px;height:8px;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 8'%3E%3Cpath d='M0,4 Q12.5,0 25,4 T50,4 T75,4 T100,4' fill='none' stroke='rgba(135,206,235,0.3)' stroke-width='1'/%3E%3C/svg%3E") no-repeat center;
+  }
+
+  /* Photo */
+  .photo-frame{
+    width:200px;height:200px;border-radius:50%;
+    border:2px solid rgba(135,206,235,0.4);
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 40% 35%,#2a5080,#1A3A5C);
+    margin:16px 0;position:relative;
+  }
+  .photo-frame::before{content:'';position:absolute;inset:-8px;border-radius:50%;border:1px solid rgba(135,206,235,0.2)}
+  .photo-frame::after{content:'';position:absolute;inset:-14px;border-radius:50%;border:1px solid rgba(135,206,235,0.1)}
+  .initials{font-family:'Playfair Display',serif;font-size:52px;color:#87CEEB;font-weight:300;letter-spacing:6px}
+
+  .name{font-family:'Playfair Display',serif;font-size:38px;font-weight:700;color:#e8f4f8;text-align:center;letter-spacing:2px;line-height:1.2}
+  .dates{font-size:17px;color:rgba(135,206,235,0.8);letter-spacing:4px;margin-top:8px;text-align:center}
+  .sunrise-sunset{font-size:12px;color:rgba(135,206,235,0.4);letter-spacing:3px;margin-top:4px}
+
+  /* Event details */
+  .event-card{
+    background:rgba(135,206,235,0.04);border:1px solid rgba(135,206,235,0.15);
+    padding:24px 36px;margin:16px 0;text-align:center;width:100%;max-width:480px;
+    position:relative;
+  }
+  .event-card::before{content:'';position:absolute;inset:3px;border:1px solid rgba(135,206,235,0.06)}
+  .event-label{font-size:11px;color:#87CEEB;letter-spacing:6px;text-transform:uppercase;margin-bottom:10px}
+  .event-value{font-size:19px;color:#e8f4f8;line-height:1.6}
+  .event-value-sm{font-size:15px;color:rgba(135,206,235,0.7);margin-top:4px;line-height:1.5}
+  .event-divider{width:40px;height:1px;background:rgba(135,206,235,0.2);margin:14px auto}
+
+  .scripture{font-style:italic;font-size:19px;line-height:1.8;color:rgba(232,244,248,0.85);text-align:center;max-width:460px}
+  .scripture-ref{font-size:13px;color:rgba(135,206,235,0.5);letter-spacing:3px;margin-top:10px}
+
+  .family-note{font-size:15px;color:rgba(135,206,235,0.6);text-align:center;line-height:1.7;max-width:440px;margin-top:8px}
+
+  .watermark{position:absolute;bottom:24px;left:0;right:0;text-align:center;font-size:9px;letter-spacing:5px;color:rgba(135,206,235,0.1);text-transform:uppercase;z-index:5}
+</style>
+</head>
+<body>
+
+<div class="poster">
+  <div class="wave wave-1"></div>
+  <div class="wave wave-2"></div>
+  <div class="wave wave-3"></div>
+  <div class="wave wave-4"></div>
+
+  <div class="border-outer"></div>
+  <div class="border-inner"></div>
+
+  <div class="wave-corner wc-tl"></div>
+  <div class="wave-corner wc-tr"></div>
+  <div class="wave-corner wc-bl"></div>
+  <div class="wave-corner wc-br"></div>
+
+  <div class="content">
+    <div class="ripple-deco">
+      <div class="ripple-center"></div>
+    </div>
+
+    <p class="celebration-label">A Celebration of Life</p>
+    <h1 class="one-week">One Week</h1>
+    <p class="celebration-sub">Memorial Celebration</p>
+
+    <div class="divider divider-wave">~</div>
+
+    <div class="photo-frame">
+      <span class="initials">GAJ</span>
+    </div>
+
+    <h2 class="name">Grace Amara Johnson</h2>
+    <p class="dates">March 10, 1950 &mdash; November 20, 2025</p>
+    <p class="sunrise-sunset">Sunrise &bull; &bull; &bull; Sunset</p>
+
+    <div class="divider divider-wave">~</div>
+
+    <div class="event-card">
+      <p class="event-label">Memorial Service</p>
+      <p class="event-value">Wednesday, January 22, 2026</p>
+      <p class="event-value">6:00 PM</p>
+      <div class="event-divider"></div>
+      <p class="event-label">Venue</p>
+      <p class="event-value">Grace Community Chapel</p>
+      <p class="event-value-sm">245 Serenity Lane, Peaceful Gardens, GA 30301</p>
+      <div class="event-divider"></div>
+      <p class="event-label">Programme</p>
+      <p class="event-value-sm">Thanksgiving Service &bull; Songs of Praise</p>
+      <p class="event-value-sm">Scripture Readings &bull; Testimonies</p>
+      <p class="event-value-sm">Light Reception to Follow</p>
+    </div>
+
+    <div class="divider divider-wave">~</div>
+
+    <p class="scripture">"He will wipe every tear from their eyes. There will be no more death or mourning or crying or pain, for the old order of things has passed away."</p>
+    <p class="scripture-ref">Revelation 21:4</p>
+
+    <div class="divider" style="margin-top:20px">~</div>
+
+    <p class="family-note">The Johnson family warmly invites you to join us as we give thanks to God for the beautiful life of our beloved Grace. Your presence and prayers continue to sustain us.</p>
+
+    <p style="font-size:13px;color:rgba(135,206,235,0.3);margin-top:20px;letter-spacing:2px;text-align:center">
+      "Those we love don't go away. They walk beside us every day."
+    </p>
+  </div>
+
+  <div class="watermark">FuneralPress</div>
+</div>
+
+</body>
+</html>

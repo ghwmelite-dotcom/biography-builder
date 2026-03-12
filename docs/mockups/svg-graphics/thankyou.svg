@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1100" width="800" height="1100">
+  <defs>
+    <linearGradient id="tyBg" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0%" stop-color="#7B6B9A"/>
+      <stop offset="40%" stop-color="#6B5B8A"/>
+      <stop offset="100%" stop-color="#5A4A78"/>
+    </linearGradient>
+    <radialGradient id="tyGlow" cx="50%" cy="35%" r="50%">
+      <stop offset="0%" stop-color="#8B7BAA" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+    <linearGradient id="tyCardBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#EDE6F5"/>
+      <stop offset="50%" stop-color="#E8E0F0"/>
+      <stop offset="100%" stop-color="#E0D6EA"/>
+    </linearGradient>
+    <filter id="tyShadow">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#3A2A58" flood-opacity="0.35"/>
+    </filter>
+    <filter id="tyTextShadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#3A2A58" flood-opacity="0.2"/>
+    </filter>
+    <filter id="tyInnerGlow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="1100" fill="url(#tyBg)"/>
+  <rect width="800" height="1100" fill="url(#tyGlow)"/>
+
+  <!-- Subtle decorative circles in background -->
+  <circle cx="150" cy="200" r="120" fill="none" stroke="#FFFFFF" stroke-width="0.3" opacity="0.08"/>
+  <circle cx="680" cy="850" r="100" fill="none" stroke="#FFFFFF" stroke-width="0.3" opacity="0.08"/>
+  <circle cx="700" cy="150" r="60" fill="none" stroke="#FFFFFF" stroke-width="0.3" opacity="0.06"/>
+
+  <!-- Card body -->
+  <g filter="url(#tyShadow)">
+    <rect x="80" y="80" width="640" height="940" rx="12" fill="url(#tyCardBg)"/>
+  </g>
+
+  <!-- Subtle inner gradient overlay -->
+  <radialGradient id="tyInnerLight" cx="50%" cy="25%" r="60%">
+    <stop offset="0%" stop-color="#F5F0FA" stop-opacity="0.5"/>
+    <stop offset="100%" stop-color="transparent"/>
+  </radialGradient>
+  <rect x="80" y="80" width="640" height="940" rx="12" fill="url(#tyInnerLight)"/>
+
+  <!-- Delicate border -->
+  <rect x="100" y="100" width="600" height="900" rx="8" fill="none" stroke="#6B5B8A" stroke-width="0.8" opacity="0.3"/>
+  <rect x="108" y="108" width="584" height="884" rx="6" fill="none" stroke="#6B5B8A" stroke-width="0.3" opacity="0.2"/>
+
+  <!-- Small cross at top -->
+  <g transform="translate(400, 180)" filter="url(#tyInnerGlow)">
+    <rect x="-2" y="-16" width="4" height="32" rx="1" fill="#6B5B8A" opacity="0.4"/>
+    <rect x="-10" y="-8" width="20" height="4" rx="1" fill="#6B5B8A" opacity="0.4"/>
+  </g>
+
+  <!-- Decorative top element -->
+  <g transform="translate(400, 220)">
+    <line x1="-80" y1="0" x2="-10" y2="0" stroke="#6B5B8A" stroke-width="0.5" opacity="0.3"/>
+    <line x1="10" y1="0" x2="80" y2="0" stroke="#6B5B8A" stroke-width="0.5" opacity="0.3"/>
+    <circle cx="0" cy="0" r="2" fill="#6B5B8A" opacity="0.2"/>
+  </g>
+
+  <!-- Large "Thank You" text -->
+  <text x="400" y="340" text-anchor="middle" font-family="Georgia, 'Palatino Linotype', serif" font-size="62" fill="#6B5B8A" font-style="italic" filter="url(#tyTextShadow)">Thank You</text>
+
+  <!-- Decorative flourish underneath -->
+  <g transform="translate(400, 370)">
+    <!-- Main flourish curve -->
+    <path d="M-120,0 Q-80,-20 -40,0 Q-20,10 0,0 Q20,10 40,0 Q80,-20 120,0" fill="none" stroke="#6B5B8A" stroke-width="1.2" opacity="0.4"/>
+    <!-- Secondary flourish -->
+    <path d="M-80,8 Q-40,-8 0,8 Q40,-8 80,8" fill="none" stroke="#6B5B8A" stroke-width="0.7" opacity="0.25"/>
+    <!-- Center dot -->
+    <circle cx="0" cy="3" r="2.5" fill="#6B5B8A" opacity="0.3"/>
+    <!-- Curl ends -->
+    <path d="M-120,0 Q-130,-5 -125,-12" fill="none" stroke="#6B5B8A" stroke-width="0.8" opacity="0.3"/>
+    <path d="M120,0 Q130,-5 125,-12" fill="none" stroke="#6B5B8A" stroke-width="0.8" opacity="0.3"/>
+  </g>
+
+  <!-- Message body -->
+  <text x="400" y="460" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#5A4A78" opacity="0.8" font-style="italic">Your love, prayers, and support during</text>
+  <text x="400" y="488" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#5A4A78" opacity="0.8" font-style="italic">this difficult time have meant more to us</text>
+  <text x="400" y="516" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#5A4A78" opacity="0.8" font-style="italic">than words can ever express.</text>
+
+  <!-- Divider -->
+  <g transform="translate(400, 560)">
+    <line x1="-100" y1="0" x2="-5" y2="0" stroke="#6B5B8A" stroke-width="0.4" opacity="0.25"/>
+    <line x1="5" y1="0" x2="100" y2="0" stroke="#6B5B8A" stroke-width="0.4" opacity="0.25"/>
+    <path d="M-4,-3 L0,3 L4,-3" fill="none" stroke="#6B5B8A" stroke-width="0.4" opacity="0.25"/>
+  </g>
+
+  <!-- In loving memory -->
+  <text x="400" y="610" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#6B5B8A" opacity="0.5" letter-spacing="3">IN LOVING MEMORY OF</text>
+
+  <!-- Name -->
+  <text x="400" y="660" text-anchor="middle" font-family="Georgia, 'Palatino Linotype', serif" font-size="28" fill="#5A4A78" font-weight="bold">Grace Amara Johnson</text>
+
+  <!-- Dates -->
+  <text x="400" y="695" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#6B5B8A" opacity="0.6" letter-spacing="2">1950 — 2025</text>
+
+  <!-- Divider -->
+  <g transform="translate(400, 730)">
+    <line x1="-80" y1="0" x2="-5" y2="0" stroke="#6B5B8A" stroke-width="0.4" opacity="0.2"/>
+    <line x1="5" y1="0" x2="80" y2="0" stroke="#6B5B8A" stroke-width="0.4" opacity="0.2"/>
+    <circle cx="0" cy="0" r="1.5" fill="#6B5B8A" opacity="0.2"/>
+  </g>
+
+  <!-- Scripture -->
+  <text x="400" y="775" text-anchor="middle" font-family="Georgia, serif" font-size="13" fill="#5A4A78" font-style="italic" opacity="0.7">"Blessed are those who mourn,</text>
+  <text x="400" y="798" text-anchor="middle" font-family="Georgia, serif" font-size="13" fill="#5A4A78" font-style="italic" opacity="0.7">for they shall be comforted."</text>
+  <text x="400" y="825" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#6B5B8A" opacity="0.4" letter-spacing="2">— MATTHEW 5:4</text>
+
+  <!-- Family name -->
+  <text x="400" y="895" text-anchor="middle" font-family="Georgia, serif" font-size="13" fill="#6B5B8A" opacity="0.6">With heartfelt gratitude,</text>
+  <text x="400" y="925" text-anchor="middle" font-family="Georgia, 'Palatino Linotype', serif" font-size="18" fill="#5A4A78" font-style="italic">The Johnson Family</text>
+
+  <!-- Bottom flourish -->
+  <g transform="translate(400, 965)">
+    <path d="M-40,0 Q-20,-8 0,0 Q20,-8 40,0" fill="none" stroke="#6B5B8A" stroke-width="0.6" opacity="0.3"/>
+  </g>
+
+  <!-- Watermark -->
+  <text x="400" y="1060" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#FFFFFF" opacity="0.25" letter-spacing="4">FUNERALPRESS</text>
+</svg>

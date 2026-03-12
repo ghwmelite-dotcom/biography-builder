@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thank You Card — Grace Amara Johnson | Thank You Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Great+Vibes&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:linear-gradient(135deg,#d8d0e8,#e8e0f0,#d8d0e8);
+    font-family:'Cormorant Garamond',serif;
+    display:flex;flex-direction:column;align-items:center;
+    min-height:100vh;padding:40px 20px;gap:40px;
+  }
+  h1,h2,h3{font-family:'Playfair Display',serif}
+
+  @keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes gentleFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+  .card-label{font-size:12px;color:#6B5B8A;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;font-family:'Cormorant Garamond',serif}
+
+  .card{
+    width:600px;max-width:100%;min-height:420px;
+    background:linear-gradient(170deg,#F5F0FA 0%,#FDFBFF 40%,#F8F4FC 70%,#F2ECF8 100%);
+    position:relative;overflow:hidden;
+    animation:fadeIn .8s ease-out both;
+    box-shadow:0 12px 40px rgba(107,91,138,0.15),0 2px 12px rgba(107,91,138,0.08);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:48px 44px;
+  }
+  .card:nth-child(2){animation-delay:.3s}
+
+  /* Border */
+  .card::before{content:'';position:absolute;inset:10px;border:1.5px solid rgba(107,91,138,0.25);pointer-events:none;z-index:1}
+  .card::after{content:'';position:absolute;inset:14px;border:1px solid rgba(107,91,138,0.1);pointer-events:none;z-index:1}
+
+  /* Flourish decorations */
+  .flourish{position:absolute;z-index:2}
+  .flourish-top{top:20px;left:50%;transform:translateX(-50%);color:rgba(107,91,138,0.2);font-size:24px;letter-spacing:8px}
+  .flourish-bottom{bottom:20px;left:50%;transform:translateX(-50%);color:rgba(107,91,138,0.2);font-size:24px;letter-spacing:8px}
+
+  .content{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;width:100%}
+
+  /* Front card */
+  .thank-you-text{font-family:'Great Vibes',cursive;font-size:56px;color:#6B5B8A;margin-bottom:4px;animation:gentleFloat 4s ease-in-out infinite}
+  .front-subtitle{font-size:14px;color:rgba(107,91,138,0.6);letter-spacing:6px;text-transform:uppercase}
+
+  .divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:rgba(107,91,138,0.3);font-size:10px}
+  .divider::before,.divider::after{content:'';width:60px;height:1px;background:linear-gradient(90deg,transparent,rgba(107,91,138,0.3),transparent)}
+
+  .photo-sm{
+    width:120px;height:120px;border-radius:50%;
+    border:2px solid rgba(107,91,138,0.3);
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle,#e8e0f0,#ddd4ea);
+    margin:12px 0;
+  }
+  .photo-sm::before{content:'GAJ';font-family:'Playfair Display',serif;font-size:32px;color:#6B5B8A;font-weight:300;letter-spacing:3px}
+
+  .front-name{font-family:'Playfair Display',serif;font-size:22px;color:#6B5B8A;letter-spacing:2px}
+  .front-dates{font-size:14px;color:rgba(107,91,138,0.6);letter-spacing:2px;margin-top:4px}
+
+  /* Inside card */
+  .inside-label{font-size:11px;color:rgba(107,91,138,0.5);letter-spacing:5px;text-transform:uppercase;margin-bottom:16px}
+
+  .gratitude-text{
+    font-size:18px;line-height:2;color:#4a3d60;text-align:center;
+    max-width:440px;
+  }
+  .gratitude-text p{margin-bottom:16px}
+
+  .family-sig{font-family:'Great Vibes',cursive;font-size:28px;color:#6B5B8A;margin-top:8px}
+  .family-name{font-size:15px;color:rgba(107,91,138,0.6);letter-spacing:3px;margin-top:4px}
+
+  .scripture-sm{font-style:italic;font-size:15px;color:rgba(107,91,138,0.5);text-align:center;margin-top:16px;line-height:1.7}
+  .scripture-ref{font-size:11px;color:rgba(107,91,138,0.35);letter-spacing:2px;margin-top:4px}
+
+  .watermark{position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:8px;letter-spacing:5px;color:rgba(107,91,138,0.1);text-transform:uppercase;z-index:4}
+
+  /* Fold line indicator */
+  .fold-indicator{
+    width:600px;max-width:100%;text-align:center;
+    border-top:1px dashed rgba(107,91,138,0.2);
+    padding-top:8px;font-size:10px;color:rgba(107,91,138,0.3);
+    letter-spacing:3px;text-transform:uppercase;
+    margin:-8px 0 8px;
+  }
+</style>
+</head>
+<body>
+
+<!-- FRONT OF CARD -->
+<div>
+  <p class="card-label">Front of Card</p>
+  <div class="card">
+    <div class="flourish flourish-top">&#10049; &nbsp; &#10049; &nbsp; &#10049;</div>
+    <div class="flourish flourish-bottom">&#10049; &nbsp; &#10049; &nbsp; &#10049;</div>
+    <div class="content">
+      <h1 class="thank-you-text">Thank You</h1>
+      <p class="front-subtitle">With heartfelt gratitude</p>
+      <div class="divider">&#9670;</div>
+      <div class="photo-sm"></div>
+      <p class="front-name">Grace Amara Johnson</p>
+      <p class="front-dates">1950 &mdash; 2025</p>
+      <div class="divider" style="margin-top:16px">&#9670;</div>
+      <p style="font-size:14px;color:rgba(107,91,138,0.5);font-style:italic;margin-top:4px">"Forever in our hearts"</p>
+    </div>
+    <div class="watermark">FuneralPress</div>
+  </div>
+</div>
+
+<div class="fold-indicator">&#8595; Fold Line &#8595;</div>
+
+<!-- INSIDE OF CARD -->
+<div>
+  <p class="card-label">Inside of Card</p>
+  <div class="card" style="min-height:480px">
+    <div class="content">
+      <p class="inside-label">A Note of Gratitude</p>
+      <div class="divider">&#9670;</div>
+      <div class="gratitude-text">
+        <p>Words cannot adequately express how deeply grateful we are for your kindness, love, and support during this most difficult time in our lives.</p>
+        <p>Your presence at the funeral of our beloved mother, grandmother, and wife, Grace Amara Johnson, brought us immeasurable comfort. Every prayer whispered, every hand held, every tear shared reminded us that we are not alone in our grief.</p>
+        <p>Mom always said that love is the greatest gift we can give one another. Through your compassion, you have given us that gift in abundance. She would have been so moved by the outpouring of love from her community.</p>
+        <p>May God bless you richly for your generosity of spirit, and may the love you have shown our family return to you a hundredfold.</p>
+      </div>
+      <div class="divider">&#9670;</div>
+      <p class="family-sig">The Johnson Family</p>
+      <p class="family-name">Robert, Samuel, Elizabeth, Kwame Jr. &amp; Abena</p>
+      <p class="scripture-sm" style="margin-top:24px">"Blessed are those who mourn, for they shall be comforted."</p>
+      <p class="scripture-ref">Matthew 5:4</p>
+    </div>
+    <div class="watermark">FuneralPress</div>
+  </div>
+</div>
+
+</body>
+</html>

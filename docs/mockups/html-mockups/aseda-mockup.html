@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aseda Memorial Card — Grace Amara Johnson | Aseda Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:linear-gradient(135deg,#1a1a12,#2a2a1a,#1a1a12);
+    font-family:'Cormorant Garamond',serif;
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:40px 20px;
+  }
+  h1,h2,h3{font-family:'Playfair Display',serif}
+
+  @keyframes fadeIn{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}
+  @keyframes patternShift{0%{background-position:0 0}100%{background-position:40px 40px}}
+
+  .card{
+    width:700px;max-width:100%;min-height:950px;
+    background:#1a1410;
+    position:relative;overflow:hidden;
+    animation:fadeIn .8s ease-out both;
+    box-shadow:0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  /* Kente-inspired border pattern */
+  .kente-border{
+    position:absolute;inset:0;z-index:1;pointer-events:none;
+  }
+  /* Top border */
+  .kente-top{position:absolute;top:0;left:0;right:0;height:40px;display:flex;overflow:hidden}
+  .kente-bottom{position:absolute;bottom:0;left:0;right:0;height:40px;display:flex;overflow:hidden}
+  .kente-left{position:absolute;top:40px;left:0;bottom:40px;width:40px;display:flex;flex-direction:column;overflow:hidden}
+  .kente-right{position:absolute;top:40px;right:0;bottom:40px;width:40px;display:flex;flex-direction:column;overflow:hidden}
+
+  .k-block{flex:0 0 40px;width:40px;height:40px;position:relative}
+  .k-block::before,.k-block::after{content:'';position:absolute}
+
+  /* Pattern variations */
+  .k1{background:#C9A84C}
+  .k1::before{inset:4px;background:#C83030}
+  .k1::after{inset:8px;background:#1B4332}
+
+  .k2{background:#C83030}
+  .k2::before{inset:4px;background:#C9A84C}
+  .k2::after{inset:8px;background:#C83030;border:2px solid #C9A84C}
+
+  .k3{background:#1B4332}
+  .k3::before{inset:4px;background:#C9A84C}
+  .k3::after{inset:8px;background:#1B4332}
+
+  .k4{background:#C9A84C}
+  .k4::before{top:0;left:0;right:0;height:50%;background:#1B4332}
+  .k4::after{bottom:0;left:0;right:0;height:50%;background:#C83030}
+
+  .k5{background:#C83030}
+  .k5::before{top:0;left:0;bottom:0;width:50%;background:#C9A84C}
+  .k5::after{top:0;right:0;bottom:0;width:50%;background:#1B4332}
+
+  /* Diamond pattern */
+  .k6{background:#C9A84C;clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%)}
+  .k6-wrap{flex:0 0 40px;width:40px;height:40px;background:#1B4332;display:flex;align-items:center;justify-content:center}
+
+  /* Zigzag */
+  .k7{background:linear-gradient(135deg,#C9A84C 25%,#C83030 25%,#C83030 50%,#1B4332 50%,#1B4332 75%,#C9A84C 75%)}
+
+  /* Stripe */
+  .k8{background:repeating-linear-gradient(0deg,#C9A84C 0px,#C9A84C 5px,#C83030 5px,#C83030 10px,#1B4332 10px,#1B4332 15px,#C9A84C 15px,#C9A84C 20px)}
+
+  .k9{background:repeating-linear-gradient(90deg,#C9A84C 0px,#C9A84C 5px,#1B4332 5px,#1B4332 10px,#C83030 10px,#C83030 15px,#C9A84C 15px,#C9A84C 20px)}
+
+  /* Checkerboard */
+  .k10{background:conic-gradient(#C9A84C 0 25%,#C83030 0 50%,#1B4332 0 75%,#C9A84C 0)}
+
+  /* Generate border blocks via repeating patterns */
+  .kente-strip{display:flex;flex-wrap:nowrap}
+  .kente-strip-v{display:flex;flex-direction:column;flex-wrap:nowrap}
+
+  /* Inner content area */
+  .inner-frame{
+    position:absolute;inset:40px;
+    border:2px solid #C9A84C;
+    z-index:2;pointer-events:none;
+  }
+  .inner-frame::before{content:'';position:absolute;inset:4px;border:1px solid rgba(201,168,76,0.3)}
+
+  .content{
+    position:relative;z-index:3;
+    display:flex;flex-direction:column;align-items:center;
+    padding:64px 60px;min-height:950px;justify-content:center;
+  }
+
+  .adinkra{font-size:36px;color:#C9A84C;margin-bottom:8px;text-shadow:0 0 20px rgba(201,168,76,0.3)}
+
+  .memorial-label{font-size:12px;color:#C9A84C;letter-spacing:8px;text-transform:uppercase;margin-bottom:4px}
+
+  .divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:#C9A84C;font-size:10px}
+  .divider::before,.divider::after{content:'';width:80px;height:1px;background:linear-gradient(90deg,transparent,#C9A84C,transparent)}
+
+  /* Photo frame with kente-inspired border */
+  .photo-frame{
+    width:200px;height:200px;position:relative;margin:16px 0;
+  }
+  .photo-kente-border{
+    position:absolute;inset:-8px;
+    background:conic-gradient(from 0deg,#C9A84C,#C83030,#1B4332,#C9A84C,#C83030,#1B4332,#C9A84C);
+    border-radius:50%;
+  }
+  .photo-inner-ring{
+    position:absolute;inset:0;border-radius:50%;
+    border:3px solid #1a1410;
+    background:radial-gradient(circle at 40% 35%,#2a2015,#1a1410);
+    display:flex;align-items:center;justify-content:center;
+    z-index:1;
+  }
+  .initials{font-family:'Playfair Display',serif;font-size:52px;color:#C9A84C;font-weight:300;letter-spacing:6px}
+
+  .name{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:#C9A84C;text-align:center;letter-spacing:2px;line-height:1.2}
+  .dates{font-size:18px;color:rgba(201,168,76,0.8);letter-spacing:4px;margin-top:8px;text-align:center}
+  .aka{font-size:15px;color:rgba(201,168,76,0.5);font-style:italic;letter-spacing:2px;margin-top:4px}
+
+  .tribute-quote{
+    font-style:italic;font-size:20px;line-height:1.8;
+    color:#e8e0d4;text-align:center;max-width:440px;
+    margin:16px 0;
+  }
+  .tribute-author{font-size:13px;color:rgba(201,168,76,0.5);letter-spacing:3px;margin-top:4px}
+
+  .service-info{text-align:center;margin-top:8px}
+  .service-info p{font-size:15px;color:rgba(232,224,212,0.6);line-height:1.6}
+  .service-info strong{color:rgba(201,168,76,0.8);font-weight:500}
+
+  /* Aseda meaning */
+  .aseda-meaning{
+    margin-top:20px;text-align:center;padding:16px 24px;
+    border:1px solid rgba(201,168,76,0.2);
+    background:rgba(201,168,76,0.03);
+  }
+  .aseda-word{font-family:'Playfair Display',serif;font-size:24px;color:#C9A84C;letter-spacing:4px}
+  .aseda-def{font-size:14px;color:rgba(232,224,212,0.5);font-style:italic;margin-top:4px}
+
+  .watermark{position:absolute;bottom:48px;left:0;right:0;text-align:center;font-size:9px;letter-spacing:5px;color:rgba(201,168,76,0.12);text-transform:uppercase;z-index:4}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- Kente Border - Top -->
+  <div class="kente-border">
+    <div class="kente-top">
+      <div class="k-block k1"></div><div class="k-block k7"></div><div class="k-block k3"></div>
+      <div class="k-block k10"></div><div class="k-block k8"></div><div class="k-block k2"></div>
+      <div class="k-block k1"></div><div class="k-block k7"></div><div class="k-block k3"></div>
+      <div class="k-block k10"></div><div class="k-block k8"></div><div class="k-block k2"></div>
+      <div class="k-block k1"></div><div class="k-block k7"></div><div class="k-block k3"></div>
+      <div class="k-block k10"></div><div class="k-block k8"></div><div class="k-block k2"></div>
+    </div>
+    <!-- Bottom -->
+    <div class="kente-bottom">
+      <div class="k-block k2"></div><div class="k-block k8"></div><div class="k-block k10"></div>
+      <div class="k-block k3"></div><div class="k-block k7"></div><div class="k-block k1"></div>
+      <div class="k-block k2"></div><div class="k-block k8"></div><div class="k-block k10"></div>
+      <div class="k-block k3"></div><div class="k-block k7"></div><div class="k-block k1"></div>
+      <div class="k-block k2"></div><div class="k-block k8"></div><div class="k-block k10"></div>
+      <div class="k-block k3"></div><div class="k-block k7"></div><div class="k-block k1"></div>
+    </div>
+    <!-- Left -->
+    <div class="kente-left">
+      <div class="k-block k9"></div><div class="k-block k10"></div><div class="k-block k3"></div>
+      <div class="k-block k9"></div><div class="k-block k1"></div><div class="k-block k10"></div>
+      <div class="k-block k9"></div><div class="k-block k3"></div><div class="k-block k10"></div>
+      <div class="k-block k9"></div><div class="k-block k1"></div><div class="k-block k10"></div>
+      <div class="k-block k9"></div><div class="k-block k3"></div><div class="k-block k10"></div>
+      <div class="k-block k9"></div><div class="k-block k1"></div><div class="k-block k10"></div>
+      <div class="k-block k9"></div><div class="k-block k3"></div><div class="k-block k10"></div>
+      <div class="k-block k9"></div><div class="k-block k1"></div>
+    </div>
+    <!-- Right -->
+    <div class="kente-right">
+      <div class="k-block k10"></div><div class="k-block k9"></div><div class="k-block k1"></div>
+      <div class="k-block k10"></div><div class="k-block k9"></div><div class="k-block k3"></div>
+      <div class="k-block k10"></div><div class="k-block k9"></div><div class="k-block k1"></div>
+      <div class="k-block k10"></div><div class="k-block k9"></div><div class="k-block k3"></div>
+      <div class="k-block k10"></div><div class="k-block k9"></div><div class="k-block k1"></div>
+      <div class="k-block k10"></div><div class="k-block k9"></div><div class="k-block k3"></div>
+      <div class="k-block k10"></div><div class="k-block k9"></div><div class="k-block k1"></div>
+      <div class="k-block k10"></div><div class="k-block k9"></div>
+    </div>
+  </div>
+
+  <div class="inner-frame"></div>
+
+  <div class="content">
+    <div class="adinkra">&#9768;</div>
+    <p class="memorial-label">In Loving Memory</p>
+    <div class="divider">&#9670;</div>
+
+    <div class="photo-frame">
+      <div class="photo-kente-border"></div>
+      <div class="photo-inner-ring">
+        <span class="initials">GAJ</span>
+      </div>
+    </div>
+
+    <h1 class="name">Grace Amara Johnson</h1>
+    <p class="dates">March 10, 1950 &mdash; November 20, 2025</p>
+    <p class="aka">n&eacute;e Mensah &bull; "Mama Grace"</p>
+
+    <div class="divider">&#9670;</div>
+
+    <p class="tribute-quote">"She clothed herself in strength and dignity, and she laughed without fear of the future. Her children rise up and call her blessed."</p>
+    <p class="tribute-author">Proverbs 31:25-28</p>
+
+    <div class="divider">&#9670;</div>
+
+    <div class="service-info">
+      <p><strong>Funeral Service</strong></p>
+      <p>Wednesday, January 15, 2026 &bull; 10:00 AM</p>
+      <p>Grace Community Chapel</p>
+      <p>Peaceful Gardens, Georgia</p>
+    </div>
+
+    <div class="aseda-meaning">
+      <p class="aseda-word">ASEDA</p>
+      <p class="aseda-def">"Gratitude" &mdash; A symbol of thankfulness and appreciation for life</p>
+    </div>
+  </div>
+
+  <div class="watermark">FuneralPress</div>
+</div>
+
+</body>
+</html>
