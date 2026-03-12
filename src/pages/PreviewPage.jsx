@@ -2,11 +2,13 @@ import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Download, Share2, BookOpenCheck, Presentation } from 'lucide-react'
 import { useBrochureStore } from '../stores/brochureStore'
+import { useAuthStore } from '../stores/authStore'
 import { useNotification } from '../components/ui/notification'
 import BrochureDocument from '../components/pdf/BrochureDocument'
 
 export default function PreviewPage() {
   const store = useBrochureStore()
+  const user = useAuthStore(s => s.user)
   const { notify } = useNotification()
 
   const pdfData = {
@@ -101,10 +103,11 @@ export default function PreviewPage() {
       </div>
 
       {/* Full-screen viewer */}
-      <div className="flex-1" aria-label="PDF viewer">
+      <div className="flex-1 relative" aria-label="PDF viewer">
         <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }} showToolbar={true}>
           <BrochureDocument data={pdfData} />
         </PDFViewer>
+        {!user?.isAdmin && <div className="pdf-download-blocker" />}
       </div>
     </div>
   )

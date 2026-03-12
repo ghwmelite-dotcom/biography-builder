@@ -8,6 +8,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { Skeleton } from '../ui/skeleton'
 import { Dialog, DialogContent } from '../ui/dialog'
 import InvitationDocument from '../invitation-pdf/InvitationDocument'
+import { useAuthStore } from '../../stores/authStore'
 
 import InvitationBasicForm from '../invitation-editor/InvitationBasicForm'
 import InvitationAnnouncementForm from '../invitation-editor/InvitationAnnouncementForm'
@@ -165,6 +166,7 @@ function useInvitationAutoSave(intervalMs = 30000) {
 
 export default function InvitationEditorLayout() {
   useInvitationAutoSave()
+  const user = useAuthStore(s => s.user)
   const [openSections, setOpenSections] = useState(['basic'])
   const [pdfData, setPdfData] = useState(() => extractPdfData())
   const [pdfReady, setPdfReady] = useState(false)
@@ -270,6 +272,7 @@ export default function InvitationEditorLayout() {
                 >
                   <InvitationDocument data={pdfData} />
                 </PDFViewer>
+                {!user?.isAdmin && <div className="pdf-download-blocker" />}
               </div>
             ) : (
               <PdfSkeleton />
@@ -314,6 +317,7 @@ export default function InvitationEditorLayout() {
                     <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }}>
                       <InvitationDocument data={pdfData} />
                     </PDFViewer>
+                    {!user?.isAdmin && <div className="pdf-download-blocker" />}
                   </div>
                 </div>
               </div>

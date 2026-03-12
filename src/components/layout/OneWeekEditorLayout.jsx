@@ -8,6 +8,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { Skeleton } from '../ui/skeleton'
 import { Dialog, DialogContent } from '../ui/dialog'
 import OneWeekDocument from '../oneweek-pdf/OneWeekDocument'
+import { useAuthStore } from '../../stores/authStore'
 
 import OneWeekBasicForm from '../oneweek-editor/OneWeekBasicForm'
 import OneWeekEventForm from '../oneweek-editor/OneWeekEventForm'
@@ -154,6 +155,7 @@ function useAutoSave(intervalMs = 30000) {
 
 export default function OneWeekEditorLayout() {
   useAutoSave()
+  const user = useAuthStore(s => s.user)
   const [openSections, setOpenSections] = useState(['basic'])
   const [pdfData, setPdfData] = useState(() => extractPdfData())
   const [pdfReady, setPdfReady] = useState(false)
@@ -250,6 +252,7 @@ export default function OneWeekEditorLayout() {
                 <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }} showToolbar={true}>
                   <OneWeekDocument data={pdfData} />
                 </PDFViewer>
+                {!user?.isAdmin && <div className="pdf-download-blocker" />}
               </div>
             ) : (
               <PdfSkeleton />
@@ -293,6 +296,7 @@ export default function OneWeekEditorLayout() {
                     <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }}>
                       <OneWeekDocument data={pdfData} />
                     </PDFViewer>
+                    {!user?.isAdmin && <div className="pdf-download-blocker" />}
                   </div>
                 </div>
               </div>

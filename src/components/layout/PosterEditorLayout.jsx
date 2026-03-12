@@ -8,6 +8,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { Skeleton } from '../ui/skeleton'
 import { Dialog, DialogContent } from '../ui/dialog'
 import PosterDocument from '../poster-pdf/PosterDocument'
+import { useAuthStore } from '../../stores/authStore'
 
 import PosterBasicForm from '../poster-editor/PosterBasicForm'
 import PosterAnnouncementForm from '../poster-editor/PosterAnnouncementForm'
@@ -183,6 +184,7 @@ function usePosterAutoSave(intervalMs = 30000) {
 
 export default function PosterEditorLayout() {
   usePosterAutoSave()
+  const user = useAuthStore(s => s.user)
   const [openSections, setOpenSections] = useState(['basic'])
   const [pdfData, setPdfData] = useState(() => extractPdfData())
   const [pdfReady, setPdfReady] = useState(false)
@@ -292,6 +294,7 @@ export default function PosterEditorLayout() {
                 >
                   <PosterDocument data={pdfData} />
                 </PDFViewer>
+                {!user?.isAdmin && <div className="pdf-download-blocker" />}
               </div>
             ) : (
               <PdfSkeleton />
@@ -336,6 +339,7 @@ export default function PosterEditorLayout() {
                     <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }}>
                       <PosterDocument data={pdfData} />
                     </PDFViewer>
+                    {!user?.isAdmin && <div className="pdf-download-blocker" />}
                   </div>
                 </div>
               </div>

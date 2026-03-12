@@ -14,6 +14,7 @@ import BrochureDocument from '../pdf/BrochureDocument'
 import ShareWhatsAppDialog from '../editor/ShareWhatsAppDialog'
 import PublishMemorialDialog from '../editor/PublishMemorialDialog'
 import PublishLiveServiceDialog from '../editor/PublishLiveServiceDialog'
+import { useAuthStore } from '../../stores/authStore'
 
 import BasicInfoForm from '../editor/BasicInfoForm'
 import CoverForm from '../editor/CoverForm'
@@ -137,6 +138,7 @@ function PdfSkeleton() {
 
 export default function EditorLayout() {
   useAutoSave()
+  const user = useAuthStore(s => s.user)
   const [openSections, setOpenSections] = useState(['basic'])
   const [pdfData, setPdfData] = useState(() => extractPdfData())
   const [pdfReady, setPdfReady] = useState(false)
@@ -272,6 +274,7 @@ export default function EditorLayout() {
                 >
                   <BrochureDocument data={pdfData} />
                 </PDFViewer>
+                {!user?.isAdmin && <div className="pdf-download-blocker" />}
               </div>
             ) : (
               <PdfSkeleton />
@@ -316,6 +319,7 @@ export default function EditorLayout() {
                     <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }}>
                       <BrochureDocument data={pdfData} />
                     </PDFViewer>
+                    {!user?.isAdmin && <div className="pdf-download-blocker" />}
                   </div>
                 </div>
               </div>

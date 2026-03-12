@@ -308,3 +308,14 @@ input[type="range"]::-webkit-slider-thumb {
   background: hsl(var(--primary));
   cursor: pointer;
 }
+
+/* Block PDF viewer toolbar download button for non-admin users */
+.pdf-download-blocker {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 120px;
+  height: 44px;
+  z-index: 10;
+  cursor: default;
+}

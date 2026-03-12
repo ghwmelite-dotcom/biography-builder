@@ -8,6 +8,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { Skeleton } from '../ui/skeleton'
 import { Dialog, DialogContent } from '../ui/dialog'
 import ThankYouDocument from '../thankyou-pdf/ThankYouDocument'
+import { useAuthStore } from '../../stores/authStore'
 
 import ThankYouBasicForm from '../thankyou-editor/ThankYouBasicForm'
 import ThankYouMessageForm from '../thankyou-editor/ThankYouMessageForm'
@@ -156,6 +157,7 @@ function useThankYouAutoSave(intervalMs = 30000) {
 
 export default function ThankYouEditorLayout() {
   useThankYouAutoSave()
+  const user = useAuthStore(s => s.user)
   const [openSections, setOpenSections] = useState(['basic'])
   const [pdfData, setPdfData] = useState(() => extractPdfData())
   const [pdfReady, setPdfReady] = useState(false)
@@ -261,6 +263,7 @@ export default function ThankYouEditorLayout() {
                 >
                   <ThankYouDocument data={pdfData} />
                 </PDFViewer>
+                {!user?.isAdmin && <div className="pdf-download-blocker" />}
               </div>
             ) : (
               <PdfSkeleton />
@@ -305,6 +308,7 @@ export default function ThankYouEditorLayout() {
                     <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }}>
                       <ThankYouDocument data={pdfData} />
                     </PDFViewer>
+                    {!user?.isAdmin && <div className="pdf-download-blocker" />}
                   </div>
                 </div>
               </div>

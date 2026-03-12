@@ -8,6 +8,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { Skeleton } from '../ui/skeleton'
 import { Dialog, DialogContent } from '../ui/dialog'
 import BookletDocument from '../booklet-pdf/BookletDocument'
+import { useAuthStore } from '../../stores/authStore'
 
 import BookletCoverForm from '../booklet-editor/BookletCoverForm'
 import BookletServiceForm from '../booklet-editor/BookletServiceForm'
@@ -171,6 +172,7 @@ function useBookletAutoSave(intervalMs = 30000) {
 
 export default function BookletEditorLayout() {
   useBookletAutoSave()
+  const user = useAuthStore(s => s.user)
   const [openSections, setOpenSections] = useState(['cover'])
   const [pdfData, setPdfData] = useState(() => extractPdfData())
   const [pdfReady, setPdfReady] = useState(false)
@@ -276,6 +278,7 @@ export default function BookletEditorLayout() {
                 >
                   <BookletDocument data={pdfData} />
                 </PDFViewer>
+                {!user?.isAdmin && <div className="pdf-download-blocker" />}
               </div>
             ) : (
               <PdfSkeleton />
@@ -320,6 +323,7 @@ export default function BookletEditorLayout() {
                     <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }}>
                       <BookletDocument data={pdfData} />
                     </PDFViewer>
+                    {!user?.isAdmin && <div className="pdf-download-blocker" />}
                   </div>
                 </div>
               </div>

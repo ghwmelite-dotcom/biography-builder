@@ -8,6 +8,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { Skeleton } from '../ui/skeleton'
 import { Dialog, DialogContent } from '../ui/dialog'
 import BannerDocument from '../banner-pdf/BannerDocument'
+import { useAuthStore } from '../../stores/authStore'
 
 import BannerBasicForm from '../banner-editor/BannerBasicForm'
 import BannerContentForm from '../banner-editor/BannerContentForm'
@@ -156,6 +157,7 @@ function useBannerAutoSave(intervalMs = 30000) {
 
 export default function BannerEditorLayout() {
   useBannerAutoSave()
+  const user = useAuthStore(s => s.user)
   const [openSections, setOpenSections] = useState(['basic'])
   const [pdfData, setPdfData] = useState(() => extractPdfData())
   const [pdfReady, setPdfReady] = useState(false)
@@ -261,6 +263,7 @@ export default function BannerEditorLayout() {
                 >
                   <BannerDocument data={pdfData} />
                 </PDFViewer>
+                {!user?.isAdmin && <div className="pdf-download-blocker" />}
               </div>
             ) : (
               <PdfSkeleton />
@@ -305,6 +308,7 @@ export default function BannerEditorLayout() {
                     <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }}>
                       <BannerDocument data={pdfData} />
                     </PDFViewer>
+                    {!user?.isAdmin && <div className="pdf-download-blocker" />}
                   </div>
                 </div>
               </div>
