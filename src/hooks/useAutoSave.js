@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react'
 import { useBrochureStore } from '../stores/brochureStore'
 
 export function useAutoSave(intervalMs = 30000) {
-  const isDirty = useBrochureStore((s) => s.isDirty)
   const saveBrochure = useBrochureStore((s) => s.saveBrochure)
   const timerRef = useRef(null)
 

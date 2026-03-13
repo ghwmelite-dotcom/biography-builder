@@ -3,7 +3,6 @@ import { Grid3X3, Save, Sun, Moon } from 'lucide-react'
 import { useCollageStore } from '../stores/collageStore'
 import { useThemeStore } from '../stores/themeStore'
 import { useNotification } from '../components/ui/notification'
-import { useMediaQuery } from '../hooks/useMediaQuery'
 import CollageCanvas from '../components/collage/CollageCanvas'
 import CollageToolbar from '../components/collage/CollageToolbar'
 import CollageExport from '../components/collage/CollageExport'
@@ -13,8 +12,6 @@ export default function CollageMakerPage() {
   const store = useCollageStore()
   const { theme, toggleTheme } = useThemeStore()
   const { notify } = useNotification()
-  const isMobile = useMediaQuery('(max-width: 1023px)')
-
   const handleSave = () => {
     store.saveCollage()
     notify('Collage saved!', 'success')

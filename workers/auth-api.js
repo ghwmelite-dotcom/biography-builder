@@ -507,6 +507,7 @@ async function handleDeleteDesign(request, env, userId, designId) {
 async function handleBulkSync(request, env, userId) {
   const { designs } = await request.json()
   if (!Array.isArray(designs)) return error('designs must be an array', 400, request)
+  if (designs.length > 100) return error('Too many designs (max 100)', 400, request)
 
   const stmt = env.DB.prepare(
     `INSERT INTO designs (id, user_id, product_type, name, data, updated_at) VALUES (?, ?, ?, ?, ?, ?)
@@ -537,6 +538,9 @@ async function handleImageUpload(request, env, userId) {
 
   if (!file) return error('No file provided', 400, request)
 
+  const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
+  if (file.size > MAX_IMAGE_SIZE) return error('File too large (max 10MB)', 413, request)
+
   const ext = file.name?.split('.').pop() || 'jpg'
   const key = `${userId}/${designId}/${fieldPath}-${Date.now()}.${ext}`
 
@@ -551,6 +555,9 @@ async function handleImageUpload(request, env, userId) {
 }
 
 async function handleImageServe(request, env, key) {
+  if (key.includes('..') || key.startsWith('/')) {
+    return new Response('Invalid key', { status: 400, headers: corsHeaders(request) })
+  }
   const object = await env.IMAGES.get(key)
   if (!object) return new Response('Not found', { status: 404, headers: corsHeaders(request) })
 
@@ -866,7 +873,8 @@ async function handleUnlockDesign(request, env, userId) {
 
   // Decrement credits (only if not unlimited)
   if (credits > 0) {
-    await env.DB.prepare('UPDATE users SET credits_remaining = credits_remaining - 1 WHERE id = ?').bind(userId).run()
+    const result = await env.DB.prepare('UPDATE users SET credits_remaining = credits_remaining - 1 WHERE id = ? AND credits_remaining > 0').bind(userId).run()
+    if (!result.meta.changes) return error('No credits remaining', 402, request)
   }
 
   await env.DB.prepare('INSERT INTO unlocked_designs (id, user_id, order_id, design_id, product_type) VALUES (?, ?, ?, ?, ?)')
@@ -998,7 +1006,9 @@ async function handleAdminOrders(request, env) {
     binds.push(plan)
   }
   if (days !== 'all') {
-    where += ` AND o.created_at >= datetime('now', '-${parseInt(days)} days')`
+    const daysInt = parseInt(days)
+    if (isNaN(daysInt) || daysInt < 0) return error('Invalid days filter', 400, request)
+    where += ` AND o.created_at >= datetime('now', '-${daysInt} days')`
   }
 
   const countResult = await env.DB.prepare(`SELECT COUNT(*) as total FROM orders o WHERE ${where}`).bind(...binds).first()
@@ -1302,13 +1312,14 @@ async function handleCreateGuestBook(request, env, userId) {
   const id = generateId()
   const slug = deceasedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + id.slice(0, 6)
 
+  if (credits > 0) {
+    const result = await env.DB.prepare('UPDATE users SET credits_remaining = credits_remaining - 1 WHERE id = ? AND credits_remaining > 0').bind(userId).run()
+    if (!result.meta.changes) return error('No credits remaining', 403, request)
+  }
+
   await env.DB.prepare(
     'INSERT INTO guest_books (id, user_id, slug, deceased_name, deceased_photo, cover_message) VALUES (?, ?, ?, ?, ?, ?)'
   ).bind(id, userId, slug, deceasedName, deceasedPhoto || null, coverMessage || null).run()
-
-  if (credits !== -1) {
-    await env.DB.prepare('UPDATE users SET credits_remaining = credits_remaining - 1 WHERE id = ?').bind(userId).run()
-  }
 
   return json({ id, slug }, 201, request)
 }
@@ -1359,13 +1370,14 @@ async function handleCreateObituary(request, env, userId) {
   const id = generateId()
   const slug = deceasedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + id.slice(0, 6)
 
+  if (credits > 0) {
+    const result = await env.DB.prepare('UPDATE users SET credits_remaining = credits_remaining - 1 WHERE id = ? AND credits_remaining > 0').bind(userId).run()
+    if (!result.meta.changes) return error('No credits remaining', 403, request)
+  }
+
   await env.DB.prepare(
     'INSERT INTO obituary_pages (id, user_id, slug, deceased_name, deceased_photo, birth_date, death_date, biography, funeral_date, funeral_time, funeral_venue, venue_address, family_members) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
   ).bind(id, userId, slug, deceasedName, deceasedPhoto || null, birthDate || null, deathDate || null, biography || null, funeralDate || null, funeralTime || null, funeralVenue || null, venueAddress || null, familyMembers || null).run()
-
-  if (credits !== -1) {
-    await env.DB.prepare('UPDATE users SET credits_remaining = credits_remaining - 1 WHERE id = ?').bind(userId).run()
-  }
 
   notifyAdmin(env, 'obituary_created', `Obituary created: ${deceasedName || 'Untitled'}`, { email: user?.email || '', name: deceasedName || '' })
 
@@ -1409,13 +1421,14 @@ async function handleCreateGallery(request, env, userId) {
   const id = generateId()
   const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + id.slice(0, 6)
 
+  if (credits > 0) {
+    const result = await env.DB.prepare('UPDATE users SET credits_remaining = credits_remaining - 1 WHERE id = ? AND credits_remaining > 0').bind(userId).run()
+    if (!result.meta.changes) return error('No credits remaining', 403, request)
+  }
+
   await env.DB.prepare(
     'INSERT INTO photo_galleries (id, user_id, slug, title, deceased_name, description) VALUES (?, ?, ?, ?, ?, ?)'
   ).bind(id, userId, slug, title, deceasedName || null, description || null).run()
-
-  if (credits !== -1) {
-    await env.DB.prepare('UPDATE users SET credits_remaining = credits_remaining - 1 WHERE id = ?').bind(userId).run()
-  }
 
   notifyAdmin(env, 'gallery_created', `Gallery created: ${title || 'Untitled'}`, { email: user?.email || '', title: title || '' })
 

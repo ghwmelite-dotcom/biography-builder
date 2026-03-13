@@ -218,8 +218,7 @@ function Cover({ deceasedName, surname, familyName, alias, photo, obituaryImage,
 /* ═══════════════════════════════════════
    RECEIPT — matches Ghanaian funeral style
    ═══════════════════════════════════════ */
-function Receipt({ no, deceasedName, surname, familyName, alias, photo, obituaryImage }) {
-  const d = (n) => '\u2024'.repeat(n) // one-dot leader character for cleaner dots
+function Receipt({ no, deceasedName, surname, familyName, alias, photo }) {
 
   return (
     <div style={{

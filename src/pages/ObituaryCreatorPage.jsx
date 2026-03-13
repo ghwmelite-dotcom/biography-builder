@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import PageMeta from '../components/seo/PageMeta'
 import { Scroll, ArrowLeft, Plus, Copy, ExternalLink, Loader2, User, Image, Calendar, MapPin, Users, FileText, Upload, LinkIcon, CheckCircle2 } from 'lucide-react'
@@ -52,7 +52,7 @@ export default function ObituaryCreatorPage() {
           setPhotoMode('url')
         }
       }
-    } catch {}
+    } catch { /* ignore */ }
   }, [])
 
   // Debounced draft saving (1 second)
@@ -66,13 +66,13 @@ export default function ObituaryCreatorPage() {
         }))
         setDraftSaved(true)
         setTimeout(() => setDraftSaved(false), 2000)
-      } catch {}
+      } catch { /* ignore */ }
     }, 1000)
     return () => { if (draftTimerRef.current) clearTimeout(draftTimerRef.current) }
   }, [deceasedName, deceasedPhoto, birthDate, deathDate, biography, funeralDate, funeralTime, funeralVenue, venueAddress, familyMembers])
 
   function clearDraft() {
-    try { localStorage.removeItem(DRAFT_KEY) } catch {}
+    try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
   }
 
   function handleFileSelect(e) {

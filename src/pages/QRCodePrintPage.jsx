@@ -29,7 +29,7 @@ export default function QRCodePrintPage() {
   const store = useBrochureStore()
   const {
     fullName, title, dateOfBirth, dateOfDeath,
-    funeralDate, funeralVenue, coverPhoto,
+    funeralDate, funeralVenue,
     memorialId, liveServiceId,
     memorialQrCode, liveServiceQrCode,
   } = store

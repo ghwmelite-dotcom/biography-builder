@@ -68,41 +68,33 @@ export const usePurchaseStore = create((set, get) => ({
   },
 
   handlePaymentSuccess: async (reference) => {
-    try {
-      const data = await apiFetch('/payments/verify', {
-        method: 'POST',
-        body: JSON.stringify({ reference }),
-      })
-      const state = {
-        credits: data.credits,
-        isUnlimited: data.isUnlimited,
-        unlockedDesigns: data.unlockedDesigns || [],
-      }
-      set(state)
-      saveCache(state)
-      return data
-    } catch (err) {
-      throw err
+    const data = await apiFetch('/payments/verify', {
+      method: 'POST',
+      body: JSON.stringify({ reference }),
+    })
+    const state = {
+      credits: data.credits,
+      isUnlimited: data.isUnlimited,
+      unlockedDesigns: data.unlockedDesigns || [],
     }
+    set(state)
+    saveCache(state)
+    return data
   },
 
   unlockDesign: async (designId, productType) => {
-    try {
-      const data = await apiFetch('/payments/unlock-design', {
-        method: 'POST',
-        body: JSON.stringify({ designId, productType }),
-      })
-      const state = {
-        credits: data.credits,
-        isUnlimited: data.isUnlimited,
-        unlockedDesigns: data.unlockedDesigns || [],
-      }
-      set(state)
-      saveCache(state)
-      return data
-    } catch (err) {
-      throw err
+    const data = await apiFetch('/payments/unlock-design', {
+      method: 'POST',
+      body: JSON.stringify({ designId, productType }),
+    })
+    const state = {
+      credits: data.credits,
+      isUnlimited: data.isUnlimited,
+      unlockedDesigns: data.unlockedDesigns || [],
     }
+    set(state)
+    saveCache(state)
+    return data
   },
 
   closeCheckout: () => set({ checkoutOpen: false, pendingDownload: null }),

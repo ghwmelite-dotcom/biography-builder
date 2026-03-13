@@ -1,4 +1,3 @@
-import { useRef } from 'react'
 import { useCollageStore, COLLAGE_TEMPLATES } from '../../stores/collageStore'
 import { X } from 'lucide-react'
 
@@ -21,9 +20,6 @@ export default function CollageCanvas() {
   }
 
   if (!template) return null
-
-  // For special shapes, apply CSS clip-path or custom grid
-  const isSpecialShape = template.shape === 'heart' || template.shape === 'cross' || template.shape === 'circle' || template.shape === 'diamond'
 
   // Cross shape mask: only show cells at indices 1, 3, 4, 5, 7 in a 3x3 grid
   const crossMask = [false, true, false, true, true, true, false, true, false]

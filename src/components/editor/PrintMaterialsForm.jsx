@@ -224,7 +224,7 @@ function WreathCardsSection({ open, onToggle }) {
 
 export default function PrintMaterialsForm({ onOpenPublish, onOpenLiveService }) {
   const store = useBrochureStore()
-  const { fullName, title, dateOfBirth, dateOfDeath, funeralVenue, familySignature, coverPhoto,
+  const { fullName, title, dateOfBirth, dateOfDeath, funeralVenue, familySignature,
     memorialId, liveServiceId, memorialQrCode, liveServiceQrCode } = store
 
   const [qrOpen, setQrOpen] = useState(true)

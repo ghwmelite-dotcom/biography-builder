@@ -23,7 +23,7 @@ export default function LoadSharedDialog({ open, onOpenChange, initialCode = '' 
     try {
       const data = await loadShared(cleanCode)
       // Remove metadata fields before applying
-      const { sharedAt, updatedAt, ...brochureData } = data
+      const { sharedAt: _sharedAt, updatedAt: _updatedAt, ...brochureData } = data
       store.createSnapshot('Before loading shared brochure')
       store.applyImport(brochureData)
       setLoaded(true)

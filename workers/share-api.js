@@ -12,11 +12,29 @@
  * 4. Deploy this code
  */
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Max-Age": "86400",
+const ALLOWED_ORIGINS = [
+  'https://funeral-brochure-app.pages.dev',
+  'https://funeralpress.org',
+  'https://www.funeralpress.org',
+  'http://localhost:5173',
+  'http://localhost:4173',
+]
+
+function getCorsOrigin(request) {
+  const origin = request.headers.get('Origin') || ''
+  if (ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.funeral-brochure-app.pages.dev')) {
+    return origin
+  }
+  return ALLOWED_ORIGINS[0]
+}
+
+function makeCorsHeaders(request) {
+  return {
+    "Access-Control-Allow-Origin": request ? getCorsOrigin(request) : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+  }
 }
 
 function generateCode() {
@@ -35,7 +53,7 @@ async function handlePost(request, env) {
     if (!body.fullName) {
       return new Response(JSON.stringify({ error: "Missing brochure data" }), {
         status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders }
+        headers: { "Content-Type": "application/json", ...makeCorsHeaders(request) }
       })
     }
 
@@ -59,35 +77,35 @@ async function handlePost(request, env) {
       url: `https://funeralpress.org/?share=${code}`,
     }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders }
+      headers: { "Content-Type": "application/json", ...makeCorsHeaders(request) }
     })
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders }
+      headers: { "Content-Type": "application/json", ...makeCorsHeaders(request) }
     })
   }
 }
 
-async function handleGet(code, env) {
+async function handleGet(code, env, request) {
   try {
     const data = await env.BROCHURES_KV.get(code)
 
     if (!data) {
       return new Response(JSON.stringify({ error: "Shared brochure not found or expired" }), {
         status: 404,
-        headers: { "Content-Type": "application/json", ...corsHeaders }
+        headers: { "Content-Type": "application/json", ...makeCorsHeaders(request) }
       })
     }
 
     return new Response(data, {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders }
+      headers: { "Content-Type": "application/json", ...makeCorsHeaders(request) }
     })
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders }
+      headers: { "Content-Type": "application/json", ...makeCorsHeaders(request) }
     })
   }
 }
@@ -98,7 +116,7 @@ async function handlePut(code, request, env) {
     if (!existing) {
       return new Response(JSON.stringify({ error: "Share code not found" }), {
         status: 404,
-        headers: { "Content-Type": "application/json", ...corsHeaders }
+        headers: { "Content-Type": "application/json", ...makeCorsHeaders(request) }
       })
     }
 
@@ -112,12 +130,12 @@ async function handlePut(code, request, env) {
 
     return new Response(JSON.stringify({ code, updated: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders }
+      headers: { "Content-Type": "application/json", ...makeCorsHeaders(request) }
     })
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders }
+      headers: { "Content-Type": "application/json", ...makeCorsHeaders(request) }
     })
   }
 }
@@ -125,7 +143,7 @@ async function handlePut(code, request, env) {
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders })
+      return new Response(null, { status: 204, headers: makeCorsHeaders(request) })
     }
 
     const url = new URL(request.url)
@@ -136,7 +154,7 @@ export default {
     }
 
     if (request.method === "GET" && path) {
-      return handleGet(path, env)
+      return handleGet(path, env, request)
     }
 
     if (request.method === "PUT" && path) {
@@ -145,7 +163,7 @@ export default {
 
     return new Response(JSON.stringify({ error: "Not found" }), {
       status: 404,
-      headers: { "Content-Type": "application/json", ...corsHeaders }
+      headers: { "Content-Type": "application/json", ...makeCorsHeaders(request) }
     })
   }
 }

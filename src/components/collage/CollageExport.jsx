@@ -19,7 +19,7 @@ export default function CollageExport() {
       a.download = 'Memorial-Collage.png'
       a.click()
       notify('Collage exported as PNG!', 'success')
-    } catch (err) {
+    } catch {
       // Fallback: use canvas API
       notify('Export failed. Try a screenshot instead.', 'error')
     }

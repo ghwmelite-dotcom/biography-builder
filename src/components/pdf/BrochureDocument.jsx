@@ -18,7 +18,7 @@ export default function BrochureDocument({ data }) {
   // Cover = page 1
   pageNum++
   // Scripture = page 2
-  const scripturePageNum = pageNum
+  // scripturePageNum = pageNum (unused)
   pageNum++
   // Officials = page 3
   const officialsPageNum = pageNum

@@ -13,7 +13,7 @@ function formatDate(dateStr) {
   })
 }
 
-function ServiceItem({ item, index, theme }) {
+function ServiceItem({ item, theme }) {
   const hasVerses = item.type === 'hymn' && item.verses && item.verses.length > 0
   const [expanded, setExpanded] = useState(hasVerses)
 

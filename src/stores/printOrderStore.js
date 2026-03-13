@@ -111,7 +111,7 @@ export const usePrintOrderStore = create((set, get) => ({
         }),
       })
       set({ pricing: data.pricing, isPricingLoading: false })
-    } catch (err) {
+    } catch {
       set({ pricing: null, isPricingLoading: false })
     }
   },

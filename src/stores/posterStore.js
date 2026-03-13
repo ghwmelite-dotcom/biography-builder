@@ -277,18 +277,18 @@ export const usePosterStore = create((set, get) => ({
   },
 }))
 
+const EXTRACT_EXCLUDE = new Set([
+  'currentId', 'isDirty', 'history', 'historyIndex', 'postersList',
+  'editCountSinceLastSave', 'lastAutoSaveAt', 'snapshots',
+  '_pushHistory', 'updateField', 'updateNested',
+  'updateFuneralArrangement', 'addFuneralArrangement', 'removeFuneralArrangement',
+  'undo', 'redo', 'canUndo', 'canRedo',
+  'savePoster', 'loadPoster', 'deletePoster', 'newPoster', 'loadFromCloudData', 'loadTemplate',
+  'exportJSON', 'importJSON', 'applyImport',
+  'createSnapshot', 'restoreSnapshot', 'deleteSnapshot',
+  'getSmartFilename',
+])
+
 function extractData(state) {
-  const {
-    currentId, isDirty, history, historyIndex, postersList,
-    editCountSinceLastSave, lastAutoSaveAt, snapshots,
-    _pushHistory, updateField, updateNested,
-    updateFuneralArrangement, addFuneralArrangement, removeFuneralArrangement,
-    undo, redo, canUndo, canRedo,
-    savePoster, loadPoster, deletePoster, newPoster, loadFromCloudData, loadTemplate,
-    exportJSON, importJSON, applyImport,
-    createSnapshot, restoreSnapshot, deleteSnapshot,
-    getSmartFilename,
-    ...data
-  } = state
-  return data
+  return Object.fromEntries(Object.entries(state).filter(([k]) => !EXTRACT_EXCLUDE.has(k)))
 }

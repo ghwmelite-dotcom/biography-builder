@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Music, Search } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog'
-import { hymns, hymnCategories, getHymnsByCategory } from '../../utils/hymnCatalog'
+import { hymnCategories, getHymnsByCategory } from '../../utils/hymnCatalog'
 
 export default function HymnCatalogDialog({ open, onOpenChange, onSelect }) {
   const [category, setCategory] = useState('all')

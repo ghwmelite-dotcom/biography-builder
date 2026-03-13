@@ -1,7 +1,7 @@
 import { Page, View, Text, Image } from '@react-pdf/renderer'
 import { PageBorders, OrnamentalDivider, CrossSymbol, TripleDot } from './decorations'
 import { createStyles } from './styles'
-import { formatDateLong, formatDateFull, formatTime, getYear } from '../../utils/formatDate'
+import { formatDateLong, formatDateFull, formatTime } from '../../utils/formatDate'
 
 export default function CoverPage({ data, theme }) {
   const s = createStyles(theme)

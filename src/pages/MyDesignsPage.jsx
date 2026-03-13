@@ -58,7 +58,6 @@ export default function MyDesignsPage() {
 
   // Print orders
   const printOrders = usePrintOrderStore(s => s.orders)
-  const isLoadingOrders = usePrintOrderStore(s => s.isLoadingOrders)
   const fetchPrintOrders = usePrintOrderStore(s => s.fetchOrders)
 
   useEffect(() => {

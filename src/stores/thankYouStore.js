@@ -218,17 +218,17 @@ export const useThankYouStore = create((set, get) => ({
   },
 }))
 
+const EXTRACT_EXCLUDE = new Set([
+  'currentId', 'isDirty', 'history', 'historyIndex', 'thankYouList',
+  'editCountSinceLastSave', 'lastAutoSaveAt', 'snapshots',
+  '_pushHistory', 'updateField',
+  'undo', 'redo', 'canUndo', 'canRedo',
+  'saveThankYou', 'loadThankYou', 'deleteThankYou', 'newThankYou', 'loadFromCloudData', 'loadTemplate',
+  'exportJSON', 'importJSON', 'applyImport',
+  'createSnapshot', 'restoreSnapshot', 'deleteSnapshot',
+  'getSmartFilename',
+])
+
 function extractData(state) {
-  const {
-    currentId, isDirty, history, historyIndex, thankYouList,
-    editCountSinceLastSave, lastAutoSaveAt, snapshots,
-    _pushHistory, updateField,
-    undo, redo, canUndo, canRedo,
-    saveThankYou, loadThankYou, deleteThankYou, newThankYou, loadFromCloudData, loadTemplate,
-    exportJSON, importJSON, applyImport,
-    createSnapshot, restoreSnapshot, deleteSnapshot,
-    getSmartFilename,
-    ...data
-  } = state
-  return data
+  return Object.fromEntries(Object.entries(state).filter(([k]) => !EXTRACT_EXCLUDE.has(k)))
 }

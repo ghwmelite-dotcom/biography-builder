@@ -201,17 +201,17 @@ export const useOneWeekStore = create((set, get) => ({
   },
 }))
 
+const EXTRACT_EXCLUDE = new Set([
+  'currentId', 'isDirty', 'history', 'historyIndex', 'designsList',
+  'editCountSinceLastSave', 'lastAutoSaveAt', 'snapshots',
+  '_pushHistory', 'updateField',
+  'undo', 'redo', 'canUndo', 'canRedo',
+  'saveDesign', 'loadDesign', 'deleteDesign', 'newDesign', 'loadFromCloudData',
+  'exportJSON', 'importJSON', 'applyImport',
+  'createSnapshot', 'restoreSnapshot', 'deleteSnapshot',
+  'getSmartFilename',
+])
+
 function extractData(state) {
-  const {
-    currentId, isDirty, history, historyIndex, designsList,
-    editCountSinceLastSave, lastAutoSaveAt, snapshots,
-    _pushHistory, updateField,
-    undo, redo, canUndo, canRedo,
-    saveDesign, loadDesign, deleteDesign, newDesign, loadFromCloudData,
-    exportJSON, importJSON, applyImport,
-    createSnapshot, restoreSnapshot, deleteSnapshot,
-    getSmartFilename,
-    ...data
-  } = state
-  return data
+  return Object.fromEntries(Object.entries(state).filter(([k]) => !EXTRACT_EXCLUDE.has(k)))
 }

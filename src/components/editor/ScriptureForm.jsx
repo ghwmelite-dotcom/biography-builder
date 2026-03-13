@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useBrochureStore } from '../../stores/brochureStore'
 import { defaultScriptures } from '../../utils/defaultData'
-import { scriptureCategories, additionalScriptures, getAllScriptures } from '../../utils/templates'
+import { scriptureCategories, additionalScriptures } from '../../utils/templates'
 import { BookOpen, Check } from 'lucide-react'
 
 const allScriptures = { ...defaultScriptures, ...additionalScriptures }

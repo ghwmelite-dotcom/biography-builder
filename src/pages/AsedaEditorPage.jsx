@@ -466,7 +466,7 @@ export default function AsedaEditorPage() {
   // ─── Dirty tracking & edit counter ──────────────────────────────────────────
   const [isDirty, setIsDirty] = useState(false)
   const [lastSavedSnapshot, setLastSavedSnapshot] = useState(() => JSON.stringify(currentDesign))
-  const [editsSinceSave, setEditsSinceSave] = useState(0)
+  const [, setEditsSinceSave] = useState(0)
   const [showBackupBanner, setShowBackupBanner] = useState(false)
   const [autoSaveLabel, setAutoSaveLabel] = useState('') // 'Saved' | 'Unsaved' | ''
 
@@ -551,7 +551,7 @@ export default function AsedaEditorPage() {
       // Clear autosave draft since we did a real save
       try { localStorage.removeItem(AUTO_SAVE_KEY) } catch { /* ignore */ }
       notify('Design saved successfully', 'success')
-    } catch (err) {
+    } catch {
       notify('Failed to save design', 'error')
     }
   }, [currentDesign, updateDesign, createDesign, notify])

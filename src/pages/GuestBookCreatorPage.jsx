@@ -33,18 +33,18 @@ export default function GuestBookCreatorPage() {
           setPhotoMode('url')
         }
       }
-    } catch {}
+    } catch { /* ignore */ }
   }, [])
 
   // Save draft on every change
   useEffect(() => {
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({ deceasedName, deceasedPhoto, coverMessage }))
-    } catch {}
+    } catch { /* ignore */ }
   }, [deceasedName, deceasedPhoto, coverMessage])
 
   function clearDraft() {
-    try { localStorage.removeItem(DRAFT_KEY) } catch {}
+    try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
   }
 
   function handleFileSelect(e) {

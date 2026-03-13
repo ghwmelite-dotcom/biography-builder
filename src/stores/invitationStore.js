@@ -249,17 +249,17 @@ export const useInvitationStore = create((set, get) => ({
   },
 }))
 
+const EXTRACT_EXCLUDE = new Set([
+  'currentId', 'isDirty', 'history', 'historyIndex', 'invitationsList',
+  'editCountSinceLastSave', 'lastAutoSaveAt', 'snapshots',
+  '_pushHistory', 'updateField', 'updateEvent', 'addEvent', 'removeEvent',
+  'undo', 'redo', 'canUndo', 'canRedo',
+  'saveInvitation', 'loadInvitation', 'deleteInvitation', 'newInvitation', 'loadFromCloudData', 'loadTemplate',
+  'exportJSON', 'importJSON', 'applyImport',
+  'createSnapshot', 'restoreSnapshot', 'deleteSnapshot',
+  'getSmartFilename',
+])
+
 function extractData(state) {
-  const {
-    currentId, isDirty, history, historyIndex, invitationsList,
-    editCountSinceLastSave, lastAutoSaveAt, snapshots,
-    _pushHistory, updateField, updateEvent, addEvent, removeEvent,
-    undo, redo, canUndo, canRedo,
-    saveInvitation, loadInvitation, deleteInvitation, newInvitation, loadFromCloudData, loadTemplate,
-    exportJSON, importJSON, applyImport,
-    createSnapshot, restoreSnapshot, deleteSnapshot,
-    getSmartFilename,
-    ...data
-  } = state
-  return data
+  return Object.fromEntries(Object.entries(state).filter(([k]) => !EXTRACT_EXCLUDE.has(k)))
 }

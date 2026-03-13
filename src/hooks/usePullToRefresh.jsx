@@ -35,7 +35,7 @@ export function usePullToRefresh(onRefresh, options = {}) {
     if (pullDistance >= threshold) {
       try {
         await onRefresh()
-      } catch (err) {
+      } catch {
         // silently fail
       }
     }

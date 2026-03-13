@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { PDFViewer } from '@react-pdf/renderer'
 import { ChevronDown, ChevronRight, Check, Eye, Share2, Globe, Radio } from 'lucide-react'
 import { useBrochureStore } from '../../stores/brochureStore'

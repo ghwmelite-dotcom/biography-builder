@@ -262,18 +262,18 @@ export const useBookletStore = create((set, get) => ({
   },
 }))
 
+const EXTRACT_EXCLUDE = new Set([
+  'currentId', 'isDirty', 'history', 'historyIndex', 'bookletsList',
+  'editCountSinceLastSave', 'lastAutoSaveAt', 'snapshots',
+  '_pushHistory', 'updateField', 'updateServiceItem', 'addServiceItem', 'removeServiceItem',
+  'toggleHymn',
+  'undo', 'redo', 'canUndo', 'canRedo',
+  'saveBooklet', 'loadBooklet', 'deleteBooklet', 'newBooklet', 'loadFromCloudData', 'loadTemplate',
+  'exportJSON', 'importJSON', 'applyImport',
+  'createSnapshot', 'restoreSnapshot', 'deleteSnapshot',
+  'getSmartFilename',
+])
+
 function extractData(state) {
-  const {
-    currentId, isDirty, history, historyIndex, bookletsList,
-    editCountSinceLastSave, lastAutoSaveAt, snapshots,
-    _pushHistory, updateField, updateServiceItem, addServiceItem, removeServiceItem,
-    toggleHymn,
-    undo, redo, canUndo, canRedo,
-    saveBooklet, loadBooklet, deleteBooklet, newBooklet, loadFromCloudData, loadTemplate,
-    exportJSON, importJSON, applyImport,
-    createSnapshot, restoreSnapshot, deleteSnapshot,
-    getSmartFilename,
-    ...data
-  } = state
-  return data
+  return Object.fromEntries(Object.entries(state).filter(([k]) => !EXTRACT_EXCLUDE.has(k)))
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import PageMeta from '../components/seo/PageMeta'
 import {
@@ -178,8 +178,6 @@ export default function LandingPage() {
     }, 3500)
     return () => clearInterval(heroTimerRef.current)
   }, [])
-
-  const currentHeroProduct = HERO_PRODUCTS[heroIdx]
 
   const heroMockups = {
     brochure: <BrochureMockup themeKey="blackGold" className="text-[10px]" />,

@@ -162,7 +162,12 @@ export const useCollageStore = create((set, get) => ({
   },
 }))
 
+const EXTRACT_EXCLUDE = new Set([
+  'currentId', 'isDirty', 'collagesList',
+  'updateField', 'setTemplate', 'updateCell', 'setCellPhoto', 'removeCellPhoto',
+  'saveCollage', 'loadCollage', 'deleteCollage', 'newCollage', 'loadFromCloudData',
+])
+
 function extractData(state) {
-  const { currentId, isDirty, collagesList, updateField, setTemplate, updateCell, setCellPhoto, removeCellPhoto, saveCollage, loadCollage, deleteCollage, newCollage, loadFromCloudData, ...data } = state
-  return data
+  return Object.fromEntries(Object.entries(state).filter(([k]) => !EXTRACT_EXCLUDE.has(k)))
 }

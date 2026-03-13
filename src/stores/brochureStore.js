@@ -497,22 +497,22 @@ export const useBrochureStore = create((set, get) => ({
   },
 }))
 
+const EXTRACT_EXCLUDE = new Set([
+  'currentId', 'isDirty', 'history', 'historyIndex', 'brochuresList',
+  'editCountSinceLastSave', 'lastAutoSaveAt', 'snapshots',
+  '_pushHistory', 'updateField', 'updateNested', 'updateServiceItem',
+  'addServiceItem', 'removeServiceItem', 'moveServiceItem',
+  'updateTribute', 'updateTributePhoto', 'updateTributeCaption', 'addTribute', 'removeTribute', 'moveTribute',
+  'updateOfficial', 'addOfficial', 'removeOfficial',
+  'updateGalleryPhoto', 'addGalleryPhoto', 'removeGalleryPhoto',
+  'updateBiographyPhoto', 'updateBiographyCaption',
+  'undo', 'redo', 'canUndo', 'canRedo',
+  'saveBrochure', 'loadBrochure', 'deleteBrochure', 'newBrochure', 'loadFromCloudData',
+  'exportJSON', 'importJSON', 'applyImport',
+  'createSnapshot', 'restoreSnapshot', 'deleteSnapshot',
+  'getSmartFilename', 'loadTemplate',
+])
+
 function extractData(state) {
-  const {
-    currentId, isDirty, history, historyIndex, brochuresList,
-    editCountSinceLastSave, lastAutoSaveAt, snapshots,
-    _pushHistory, updateField, updateNested, updateServiceItem,
-    addServiceItem, removeServiceItem, moveServiceItem,
-    updateTribute, updateTributePhoto, updateTributeCaption, addTribute, removeTribute, moveTribute,
-    updateOfficial, addOfficial, removeOfficial,
-    updateGalleryPhoto, addGalleryPhoto, removeGalleryPhoto,
-    updateBiographyPhoto, updateBiographyCaption,
-    undo, redo, canUndo, canRedo,
-    saveBrochure, loadBrochure, deleteBrochure, newBrochure, loadFromCloudData,
-    exportJSON, importJSON, applyImport,
-    createSnapshot, restoreSnapshot, deleteSnapshot,
-    getSmartFilename, loadTemplate,
-    ...data
-  } = state
-  return data
+  return Object.fromEntries(Object.entries(state).filter(([k]) => !EXTRACT_EXCLUDE.has(k)))
 }

@@ -27,18 +27,18 @@ export default function GalleryCreatorPage() {
         setDeceasedName(draft.deceasedName || '')
         setDescription(draft.description || '')
       }
-    } catch {}
+    } catch { /* ignore */ }
   }, [])
 
   // Save draft on every change
   useEffect(() => {
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, deceasedName, description }))
-    } catch {}
+    } catch { /* ignore */ }
   }, [title, deceasedName, description])
 
   function clearDraft() {
-    try { localStorage.removeItem(DRAFT_KEY) } catch {}
+    try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
   }
 
   useEffect(() => {
