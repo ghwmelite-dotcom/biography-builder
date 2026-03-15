@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Helmet } from 'react-helmet-async'
 import PageMeta from '../../components/seo/PageMeta'
 import { ChevronDown, ArrowRight } from 'lucide-react'
 
@@ -31,18 +30,6 @@ const faqs = [
   },
 ]
 
-const faqSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: faqs.map((faq) => ({
-    '@type': 'Question',
-    name: faq.question,
-    acceptedAnswer: {
-      '@type': 'Answer',
-      text: faq.answer,
-    },
-  })),
-}
 
 function FAQItem({ question, answer }) {
   const [open, setOpen] = useState(false)
@@ -73,10 +60,12 @@ export default function FuneralInvitationTemplatesPage() {
         title="Funeral Invitation Templates — Announce with Dignity | FuneralPress"
         description="Create funeral and burial invitation cards online. Beautiful templates for death announcements, funeral invitations, and memorial service notices. Share via WhatsApp."
         path="/funeral-invitation-templates"
+        breadcrumbs={[
+          { name: 'Home', path: '/' },
+          { name: 'Funeral Invitation Templates', path: '/funeral-invitation-templates' },
+        ]}
+        faqs={faqs}
       />
-      <Helmet>
-        <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
-      </Helmet>
 
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-4 pt-16 pb-12 text-center">

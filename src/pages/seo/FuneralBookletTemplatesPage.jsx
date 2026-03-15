@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Helmet } from 'react-helmet-async'
 import PageMeta from '../../components/seo/PageMeta'
 import { ChevronDown, ArrowRight } from 'lucide-react'
 
@@ -29,18 +28,6 @@ const faqs = [
   },
 ]
 
-const faqSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: faqs.map((faq) => ({
-    '@type': 'Question',
-    name: faq.question,
-    acceptedAnswer: {
-      '@type': 'Answer',
-      text: faq.answer,
-    },
-  })),
-}
 
 function FAQItem({ question, answer }) {
   const [open, setOpen] = useState(false)
@@ -71,10 +58,12 @@ export default function FuneralBookletTemplatesPage() {
         title="Order of Service Booklet Templates — Design Online | FuneralPress"
         description="Design funeral order of service booklets with our easy editor. Add hymns, tributes, programme of events, and photos. Print-ready PDF download included."
         path="/funeral-booklet-templates"
+        breadcrumbs={[
+          { name: 'Home', path: '/' },
+          { name: 'Funeral Booklet Templates', path: '/funeral-booklet-templates' },
+        ]}
+        faqs={faqs}
       />
-      <Helmet>
-        <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
-      </Helmet>
 
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-4 pt-16 pb-12 text-center">

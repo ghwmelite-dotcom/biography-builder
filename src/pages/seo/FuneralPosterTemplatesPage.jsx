@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Helmet } from 'react-helmet-async'
 import PageMeta from '../../components/seo/PageMeta'
 import { ChevronDown, ArrowRight } from 'lucide-react'
 
@@ -31,18 +30,6 @@ const faqs = [
   },
 ]
 
-const faqSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: faqs.map((faq) => ({
-    '@type': 'Question',
-    name: faq.question,
-    acceptedAnswer: {
-      '@type': 'Answer',
-      text: faq.answer,
-    },
-  })),
-}
 
 function FAQItem({ question, answer }) {
   const [open, setOpen] = useState(false)
@@ -73,10 +60,12 @@ export default function FuneralPosterTemplatesPage() {
         title="Funeral Poster Templates — Create Stunning Designs | FuneralPress"
         description="Design funeral and burial posters online. Professional templates you can customise in minutes. Add photos, dates, venue details. Download high-quality PDF."
         path="/funeral-poster-templates"
+        breadcrumbs={[
+          { name: 'Home', path: '/' },
+          { name: 'Funeral Poster Templates', path: '/funeral-poster-templates' },
+        ]}
+        faqs={faqs}
       />
-      <Helmet>
-        <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
-      </Helmet>
 
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-4 pt-16 pb-12 text-center">

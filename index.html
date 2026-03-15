@@ -29,40 +29,82 @@
     <meta property="og:description" content="Design funeral brochures, posters, invitations, and memorial pages online. Ghana's most trusted funeral planning platform. Start designing free today." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://funeralpress.org" />
-    <meta property="og:image" content="https://funeralpress.org/og-image.svg" />
+    <meta property="og:image" content="https://funeralpress.org/og-image.png" />
 
     <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="FuneralPress — Ghana's All-in-One Funeral Design Platform" />
     <meta name="twitter:description" content="Design funeral brochures, posters, invitations, and memorial pages online. Ghana's most trusted funeral planning platform. Start designing free today." />
-    <meta name="twitter:image" content="https://funeralpress.org/og-image.svg" />
+    <meta name="twitter:image" content="https://funeralpress.org/og-image.png" />
 
-    <!-- Structured Data -->
+    <!-- Structured Data: Organization (global, every page) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Organization",
+      "@id": "https://funeralpress.org/#organization",
       "name": "FuneralPress",
       "url": "https://funeralpress.org",
-      "logo": "https://funeralpress.org/logo.svg",
-      "description": "Design premium funeral brochures, obituary posters, memorial booklets, invitations, and more. Professional templates with AI tribute writer and print-ready PDF export.",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://funeralpress.org/logo.svg",
+        "width": 512,
+        "height": 512
+      },
+      "description": "Ghana's all-in-one funeral design platform. Design premium funeral brochures, obituary posters, memorial booklets, invitations, and more with professional templates, AI tribute writer, and print-ready PDF export.",
       "foundingDate": "2026",
-      "areaServed": "GH"
+      "areaServed": {
+        "@type": "Country",
+        "name": "Ghana",
+        "sameAs": "https://en.wikipedia.org/wiki/Ghana"
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "GH"
+      },
+      "sameAs": [
+        "https://x.com/fuaborPress",
+        "https://www.instagram.com/funeralpress",
+        "https://www.facebook.com/funeralpress"
+      ],
+      "knowsAbout": [
+        "Funeral brochure design",
+        "Funeral programme design Ghana",
+        "Memorial page creation",
+        "Obituary writing",
+        "Ghanaian funeral traditions",
+        "Akan funeral customs",
+        "Funeral planning tools",
+        "Funeral printing Ghana"
+      ],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "availableLanguage": ["English"],
+        "url": "https://funeralpress.org"
+      }
     }
     </script>
+
+    <!-- Structured Data: WebSite with SearchAction -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
+      "@id": "https://funeralpress.org/#website",
       "name": "FuneralPress",
       "url": "https://funeralpress.org",
+      "publisher": { "@id": "https://funeralpress.org/#organization" },
       "potentialAction": {
         "@type": "SearchAction",
         "target": "https://funeralpress.org/themes?q={search_term_string}",
         "query-input": "required name=search_term_string"
-      }
+      },
+      "inLanguage": "en"
     }
     </script>
+
+    <!-- Structured Data: SoftwareApplication with pricing tiers -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -71,27 +113,46 @@
       "url": "https://funeralpress.org",
       "applicationCategory": "DesignApplication",
       "operatingSystem": "Web",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "GHS"
-      },
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Single Design",
+          "price": "35",
+          "priceCurrency": "GHS",
+          "description": "One funeral design (brochure, poster, or invitation)"
+        },
+        {
+          "@type": "Offer",
+          "name": "Bundle Pack",
+          "price": "75",
+          "priceCurrency": "GHS",
+          "description": "Three funeral designs"
+        },
+        {
+          "@type": "Offer",
+          "name": "Unlimited Suite",
+          "price": "120",
+          "priceCurrency": "GHS",
+          "description": "Unlimited designs across all product types"
+        }
+      ],
       "description": "Design funeral brochures, posters, invitations, and memorial pages online. Ghana's most trusted funeral planning platform.",
-      "screenshot": "https://funeralpress.org/og-image.svg",
-      "featureList": "Funeral Brochure Designer, Memorial Pages, Obituary Creator, Budget Planner, 11000+ Hymn Library, QR Code Cards"
+      "screenshot": "https://funeralpress.org/og-image.png",
+      "featureList": "Funeral Brochure Designer, Funeral Poster Designer, Funeral Invitation Designer, Programme Booklet Designer, Memorial Pages, Obituary Creator, Budget Planner, 11000+ Hymn Library, QR Code Cards, AI Tribute Writer, Print-Ready PDF Export",
+      "creator": { "@id": "https://funeralpress.org/#organization" }
     }
     </script>
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>body{margin:0;background:#09090b}</style>
 
-    <!-- Google Analytics 4 -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-32X7PVYC5H"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-XXXXXXXXXX');
+      gtag('config', 'G-32X7PVYC5H');
     </script>
   </head>
   <body>

@@ -1,9 +1,8 @@
+# FuneralPress — Crawl directives
+# Updated: 2026-03-15
+
 User-agent: *
 Allow: /
-
-Sitemap: https://funeralpress.org/sitemap.xml
-
-# Private app pages
 Disallow: /editor
 Disallow: /poster-editor
 Disallow: /invitation-editor
@@ -23,3 +22,23 @@ Disallow: /guest-book-creator
 Disallow: /obituary-creator
 Disallow: /oneweek-editor
 Disallow: /anniversaries
+Disallow: /api/
+Disallow: /flipbook
+
+# AI Search Crawlers — Allow for AEO visibility
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+Sitemap: https://funeralpress.org/sitemap.xml

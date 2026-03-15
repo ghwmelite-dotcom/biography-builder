@@ -40,6 +40,8 @@ import {
   QrCode,
   Receipt,
   Calendar,
+  ChevronDown,
+  HelpCircle,
 } from 'lucide-react'
 import { Sun, Moon } from 'lucide-react'
 import { useBrochureStore } from '../stores/brochureStore'
@@ -133,6 +135,65 @@ const HERO_PRODUCTS = [
   { label: 'Collages', mockup: 'collage', route: '/collage-maker' },
   { label: 'One-Week Posters', mockup: 'oneweek', route: '/oneweek-editor' },
 ]
+
+const LANDING_FAQS = [
+  {
+    question: 'What is FuneralPress?',
+    answer: 'FuneralPress is an online funeral design and planning platform built for families in Ghana and across Africa. It lets you design funeral brochures, posters, invitations, booklets, thank-you cards, banners, and memorial pages — all from your phone or computer, with no design skills required.',
+  },
+  {
+    question: 'How much does FuneralPress cost?',
+    answer: 'You can start designing for free. A single design download costs GHS 35, a bundle of 3 designs is GHS 75, and unlimited designs cost GHS 120. All plans include print-ready PDF export, cloud sync, and access to every template.',
+  },
+  {
+    question: 'Can I design a funeral brochure on my phone?',
+    answer: 'Yes. FuneralPress is fully mobile-responsive and works as an installable app on both Android and iPhone. You can design, preview, and download your brochure directly from your phone browser.',
+  },
+  {
+    question: 'How do I print my funeral brochure or poster?',
+    answer: 'Download your design as a high-resolution, print-ready PDF, then take it to any printing shop. You can also use our integrated print-and-deliver service for doorstep delivery within Ghana.',
+  },
+  {
+    question: 'Do you have templates for my church denomination?',
+    answer: 'Yes. FuneralPress offers denomination-specific templates for Methodist, Catholic, Presbyterian, Pentecostal, Charismatic, Anglican, and SDA (Seventh-day Adventist) funeral services, each following the correct liturgical order.',
+  },
+  {
+    question: 'Can I share my design digitally on WhatsApp?',
+    answer: 'Absolutely. Every design can be downloaded as a PDF or image and shared instantly via WhatsApp, Facebook, email, or any messaging platform. You can also generate a 6-character share code so others can view or collaborate on your design.',
+  },
+  {
+    question: 'What is the AI Tribute Writer?',
+    answer: 'The AI Tribute Writer is a built-in tool that helps you write heartfelt tributes, biographies, and acknowledgement messages for your funeral brochure. Simply provide a few details about the deceased and the AI generates a moving tribute you can edit and personalise.',
+  },
+  {
+    question: 'Is my data safe on FuneralPress?',
+    answer: 'Yes. Your designs are encrypted and stored securely in the cloud. You sign in with your Google account, and your designs auto-save and sync across all your devices. Only you can access your designs.',
+  },
+]
+
+function FAQItem({ question, answer }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="border border-border rounded-xl overflow-hidden transition-all">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-5 sm:px-6 py-4 text-left text-foreground font-medium hover:bg-card transition-colors"
+      >
+        <span className="pr-4">{question}</span>
+        <ChevronDown className={`w-5 h-5 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <div
+        className={`grid transition-all duration-200 ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+      >
+        <div className="overflow-hidden">
+          <div className="px-5 sm:px-6 pb-4 text-muted-foreground leading-relaxed text-sm">
+            {answer}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function LandingPage() {
   const navigate = useNavigate()
@@ -443,6 +504,7 @@ export default function LandingPage() {
         title="FuneralPress — Ghana's All-in-One Funeral Design Platform"
         description="Design funeral brochures, posters, invitations, and memorial pages online. Ghana's most trusted funeral planning platform. Start designing free today."
         path="/"
+        faqs={LANDING_FAQS}
       />
       {/* Partner banner (shown when ?ref=CODE or ?partner=CODE) */}
       {partnerData && <PartnerBanner partner={partnerData} />}
@@ -1743,6 +1805,25 @@ export default function LandingPage() {
             <Link to="/blog" className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-medium rounded-full hover:bg-primary/90 transition-colors shadow-md">
               View All Guides <ArrowRight size={16} />
             </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Frequently Asked Questions */}
+      <div className="py-20 px-4 sm:px-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-10">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold tracking-wide uppercase mb-4">
+              <HelpCircle size={14} />
+              FAQ
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground">Frequently Asked Questions</h2>
+            <p className="text-base text-muted-foreground mt-3 max-w-xl mx-auto">Everything you need to know about designing funeral materials with FuneralPress</p>
+          </div>
+          <div className="space-y-3">
+            {LANDING_FAQS.map((faq) => (
+              <FAQItem key={faq.question} question={faq.question} answer={faq.answer} />
+            ))}
           </div>
         </div>
       </div>

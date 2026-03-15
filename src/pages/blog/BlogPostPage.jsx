@@ -1,5 +1,4 @@
 import { useParams, Link } from 'react-router-dom'
-import { Helmet } from 'react-helmet-async'
 import PageMeta from '../../components/seo/PageMeta'
 import blogPosts from '../../data/blogPosts'
 
@@ -28,30 +27,6 @@ export default function BlogPostPage() {
 
   const relatedPosts = blogPosts.filter((p) => p.slug !== slug)
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: post.title,
-    description: post.description,
-    datePublished: post.date,
-    dateModified: post.date,
-    author: {
-      '@type': 'Organization',
-      name: 'FuneralPress',
-      url: 'https://funeralpress.org',
-    },
-    publisher: {
-      '@type': 'Organization',
-      name: 'FuneralPress',
-      url: 'https://funeralpress.org',
-    },
-    mainEntityOfPage: {
-      '@type': 'WebPage',
-      '@id': `https://funeralpress.org/blog/${post.slug}`,
-    },
-    keywords: post.keywords.join(', '),
-  }
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       <PageMeta
@@ -59,11 +34,17 @@ export default function BlogPostPage() {
         description={post.description}
         path={`/blog/${post.slug}`}
         type="article"
+        article={{
+          datePublished: post.date,
+          dateModified: post.date,
+          keywords: post.keywords,
+        }}
+        breadcrumbs={[
+          { name: 'Home', path: '/' },
+          { name: 'Blog', path: '/blog' },
+          { name: post.title, path: `/blog/${post.slug}` },
+        ]}
       />
-
-      <Helmet>
-        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
-      </Helmet>
 
       <article className="max-w-3xl mx-auto px-4 py-16">
         <Link

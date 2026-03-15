@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Helmet } from 'react-helmet-async'
 import PageMeta from '../../components/seo/PageMeta'
 import { ChevronDown, ArrowRight } from 'lucide-react'
 
@@ -33,18 +32,6 @@ const faqs = [
   },
 ]
 
-const faqSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: faqs.map((faq) => ({
-    '@type': 'Question',
-    name: faq.question,
-    acceptedAnswer: {
-      '@type': 'Answer',
-      text: faq.answer,
-    },
-  })),
-}
 
 function FAQItem({ question, answer }) {
   const [open, setOpen] = useState(false)
@@ -75,10 +62,12 @@ export default function FuneralBrochureTemplatesPage() {
         title="Funeral Brochure Templates — Design & Download Free | FuneralPress"
         description="Choose from beautifully designed funeral brochure templates. Customise with photos, hymns, and tributes. Download as PDF or share digitally. Start free."
         path="/funeral-brochure-templates"
+        breadcrumbs={[
+          { name: 'Home', path: '/' },
+          { name: 'Funeral Brochure Templates', path: '/funeral-brochure-templates' },
+        ]}
+        faqs={faqs}
       />
-      <Helmet>
-        <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
-      </Helmet>
 
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-4 pt-16 pb-12 text-center">
