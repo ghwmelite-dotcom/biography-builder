@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Helmet } from 'react-helmet-async'
 
 /**
@@ -25,67 +26,78 @@ export default function PageMeta({
   const url = `https://funeralpress.org${path}`
   const ogImage = image || 'https://funeralpress.org/og-image.png'
 
-  const breadcrumbSchema = breadcrumbs?.length
-    ? {
-        '@context': 'https://schema.org',
-        '@type': 'BreadcrumbList',
-        itemListElement: breadcrumbs.map((crumb, i) => ({
-          '@type': 'ListItem',
-          position: i + 1,
-          name: crumb.name,
-          item: `https://funeralpress.org${crumb.path}`,
-        })),
-      }
-    : null
+  const breadcrumbSchema = useMemo(
+    () =>
+      breadcrumbs?.length
+        ? JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: breadcrumbs.map((crumb, i) => ({
+              '@type': 'ListItem',
+              position: i + 1,
+              name: crumb.name,
+              item: `https://funeralpress.org${crumb.path}`,
+            })),
+          })
+        : null,
+    [breadcrumbs],
+  )
 
-  const faqSchema = faqs?.length
-    ? {
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: faqs.map((faq) => ({
-          '@type': 'Question',
-          name: faq.question,
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: faq.answer,
-          },
-        })),
-      }
-    : null
+  const faqSchema = useMemo(
+    () =>
+      faqs?.length
+        ? JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: faqs.map((faq) => ({
+              '@type': 'Question',
+              name: faq.question,
+              acceptedAnswer: {
+                '@type': 'Answer',
+                text: faq.answer,
+              },
+            })),
+          })
+        : null,
+    [faqs],
+  )
 
-  const articleSchema =
-    type === 'article' && article
-      ? {
-          '@context': 'https://schema.org',
-          '@type': 'Article',
-          headline: title,
-          description,
-          image: ogImage,
-          datePublished: article.datePublished,
-          dateModified: article.dateModified || article.datePublished,
-          author: {
-            '@type': 'Organization',
-            '@id': 'https://funeralpress.org/#organization',
-            name: 'FuneralPress',
-            url: 'https://funeralpress.org',
-          },
-          publisher: {
-            '@type': 'Organization',
-            '@id': 'https://funeralpress.org/#organization',
-            name: 'FuneralPress',
-            url: 'https://funeralpress.org',
-            logo: {
-              '@type': 'ImageObject',
-              url: 'https://funeralpress.org/logo.svg',
+  const articleSchema = useMemo(
+    () =>
+      type === 'article' && article
+        ? JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Article',
+            headline: title,
+            description,
+            image: ogImage,
+            datePublished: article.datePublished,
+            dateModified: article.dateModified || article.datePublished,
+            author: {
+              '@type': 'Organization',
+              '@id': 'https://funeralpress.org/#organization',
+              name: 'FuneralPress',
+              url: 'https://funeralpress.org',
             },
-          },
-          mainEntityOfPage: {
-            '@type': 'WebPage',
-            '@id': url,
-          },
-          keywords: article.keywords?.join(', '),
-        }
-      : null
+            publisher: {
+              '@type': 'Organization',
+              '@id': 'https://funeralpress.org/#organization',
+              name: 'FuneralPress',
+              url: 'https://funeralpress.org',
+              logo: {
+                '@type': 'ImageObject',
+                url: 'https://funeralpress.org/logo.svg',
+              },
+            },
+            mainEntityOfPage: {
+              '@type': 'WebPage',
+              '@id': url,
+            },
+            keywords: article.keywords?.join(', '),
+          })
+        : null,
+    [type, article, title, description, ogImage, url],
+  )
 
   return (
     <Helmet>
@@ -118,17 +130,17 @@ export default function PageMeta({
 
       {/* Structured Data: BreadcrumbList */}
       {breadcrumbSchema && (
-        <script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script>
+        <script type="application/ld+json">{breadcrumbSchema}</script>
       )}
 
       {/* Structured Data: FAQPage */}
       {faqSchema && (
-        <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
+        <script type="application/ld+json">{faqSchema}</script>
       )}
 
       {/* Structured Data: Article */}
       {articleSchema && (
-        <script type="application/ld+json">{JSON.stringify(articleSchema)}</script>
+        <script type="application/ld+json">{articleSchema}</script>
       )}
     </Helmet>
   )
