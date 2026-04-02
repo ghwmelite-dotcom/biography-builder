@@ -1,5 +1,6 @@
 import { pdf, Document, Page, Image } from '@react-pdf/renderer'
 import { toPng } from 'html-to-image'
+import { applyWatermark } from './watermark'
 
 const CREAM = '#FDF8F0'
 
@@ -10,12 +11,13 @@ const A4_H = 841.89
 /**
  * Capture a DOM element as a high-res PNG, wrap in an A4 PDF, and trigger download.
  */
-export async function downloadCardAsPdf(element, filename) {
-  const dataUrl = await toPng(element, {
+export async function downloadCardAsPdf(element, filename, { watermark = false } = {}) {
+  let dataUrl = await toPng(element, {
     pixelRatio: 3,
     cacheBust: true,
     backgroundColor: CREAM,
   })
+  if (watermark) { dataUrl = await applyWatermark(dataUrl) }
 
   const PdfDoc = () => (
     <Document>
@@ -39,16 +41,18 @@ export async function downloadCardAsPdf(element, filename) {
  * The element is rendered at `captureWidth` px and sliced into pages
  * proportional to an A4 aspect ratio.
  */
-export async function downloadPageAsPdf(element, filename, { bgColor = '#ffffff' } = {}) {
+export async function downloadPageAsPdf(element, filename, { bgColor = '#ffffff', watermark = false } = {}) {
   const captureWidth = element.scrollWidth || element.offsetWidth
 
-  const dataUrl = await toPng(element, {
+  let dataUrl = await toPng(element, {
     pixelRatio: 2,
     cacheBust: true,
     backgroundColor: bgColor,
     width: captureWidth,
     height: element.scrollHeight,
   })
+
+  if (watermark) { dataUrl = await applyWatermark(dataUrl) }
 
   // Load as an Image to get true pixel dimensions
   const img = await new Promise((resolve) => {

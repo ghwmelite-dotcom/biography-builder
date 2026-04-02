@@ -26,6 +26,7 @@ export const usePurchaseStore = create((set, get) => ({
   isLoading: false,
   checkoutOpen: false,
   pendingDownload: null, // { designId, productType }
+  subscription: null,
 
   fetchStatus: async () => {
     set({ isLoading: true })
@@ -57,9 +58,25 @@ export const usePurchaseStore = create((set, get) => ({
     saveCache(state)
   },
 
+  fetchSubscription: async () => {
+    try {
+      const data = await apiFetch('/subscriptions/status')
+      set({ subscription: data.hasSubscription ? data : null })
+    } catch {
+      // Subscription status is non-critical
+    }
+  },
+
+  hasActiveSubscription: () => {
+    const { subscription } = get()
+    return subscription && subscription.hasSubscription && subscription.status === 'active'
+  },
+
   canDownload: (designId) => {
-    const { isUnlimited, unlockedDesigns } = get()
-    return isUnlimited || unlockedDesigns.includes(designId)
+    const { isUnlimited, unlockedDesigns, subscription } = get()
+    if (isUnlimited || unlockedDesigns.includes(designId)) return true
+    if (subscription && subscription.hasSubscription && subscription.status === 'active' && subscription.monthlyCreditsRemaining > 0) return true
+    return false
   },
 
   requestDownload: (designId, productType) => {
@@ -102,7 +119,7 @@ export const usePurchaseStore = create((set, get) => ({
   closeCheckout: () => set({ checkoutOpen: false, pendingDownload: null }),
 
   clear: () => {
-    set({ credits: 0, unlockedDesigns: [], isUnlimited: false, isLoading: false, checkoutOpen: false, pendingDownload: null })
+    set({ credits: 0, unlockedDesigns: [], isUnlimited: false, isLoading: false, checkoutOpen: false, pendingDownload: null, subscription: null })
     saveCache(null)
   },
 }))

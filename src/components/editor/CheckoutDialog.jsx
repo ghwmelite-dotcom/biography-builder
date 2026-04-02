@@ -25,6 +25,11 @@ const INSTITUTIONAL_PLANS = [
   { key: 'bulk50', name: 'Premium Pack', price: 800, credits: '50 designs', desc: 'High-volume partners', badge: 'Save GHS 950' },
 ]
 
+const SUBSCRIPTION_PLANS = [
+  { key: 'pro_monthly', name: 'Pro Monthly', price: 85, credits: '15/month', desc: 'No watermark, priority print, unlimited AI', badge: 'Popular' },
+  { key: 'pro_annual', name: 'Pro Annual', price: 850, credits: '15/month', desc: '2 months free vs monthly', badge: 'Best Value' },
+]
+
 export default function CheckoutDialog() {
   const checkoutOpen = usePurchaseStore(s => s.checkoutOpen)
   const pendingDownload = usePurchaseStore(s => s.pendingDownload)
@@ -38,6 +43,7 @@ export default function CheckoutDialog() {
 
   const [stage, setStage] = useState('idle') // idle | has-credits | loading | paying | verifying | success | error | not-logged-in
   const [errorMsg, setErrorMsg] = useState('')
+  const [planType, setPlanType] = useState('onetime')
 
   // Determine initial stage when dialog opens
   useEffect(() => {
@@ -116,6 +122,20 @@ export default function CheckoutDialog() {
       setStage('error')
     }
   }, [handlePaymentSuccess, unlockDesign, pendingDownload, closeCheckout])
+
+  const handleSelectSubscription = useCallback(async (planKey) => {
+    setStage('loading')
+    try {
+      const data = await apiFetch('/subscriptions/create', {
+        method: 'POST',
+        body: JSON.stringify({ plan: planKey }),
+      })
+      window.location.href = data.authorization_url
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to start subscription')
+      setStage('error')
+    }
+  }, [])
 
   const handleGoogleSignIn = useCallback(() => {
     // Trigger Google One Tap / sign-in flow
@@ -215,6 +235,52 @@ export default function CheckoutDialog() {
           {/* Pricing cards (idle state) */}
           {stage === 'idle' && (
             <div className="space-y-3">
+              <div className="flex bg-muted rounded-lg p-1 mb-3">
+                <button
+                  onClick={() => setPlanType('onetime')}
+                  className={`flex-1 text-xs py-1.5 rounded-md transition-colors ${planType === 'onetime' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}
+                >
+                  One-Time
+                </button>
+                <button
+                  onClick={() => setPlanType('subscribe')}
+                  className={`flex-1 text-xs py-1.5 rounded-md transition-colors ${planType === 'subscribe' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}
+                >
+                  Subscribe
+                </button>
+              </div>
+
+              {planType === 'subscribe' ? (
+                <>
+                  {SUBSCRIPTION_PLANS.map((plan) => (
+                    <button
+                      key={plan.key}
+                      onClick={() => handleSelectSubscription(plan.key)}
+                      className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-colors text-left hover:border-primary/50 hover:bg-card/50 ${
+                        plan.badge ? 'border-primary/30 bg-primary/5' : 'border-border'
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-card-foreground">{plan.name}</span>
+                          {plan.badge && (
+                            <span className="px-2 py-0.5 text-[10px] font-bold uppercase bg-primary/20 text-primary rounded-full">
+                              {plan.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{plan.desc}</p>
+                        <p className="text-xs text-muted-foreground">{plan.credits}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-lg font-bold text-card-foreground">GHS {plan.price}</span>
+                        <p className="text-[10px] text-muted-foreground">{plan.key === 'pro_annual' ? '/year' : '/month'}</p>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <>
               {PLANS.map((plan) => (
                 <button
                   key={plan.key}
@@ -279,6 +345,8 @@ export default function CheckoutDialog() {
               <p className="text-[10px] text-muted-foreground text-center pt-2">
                 MTN MoMo, Vodafone Cash, Visa & Mastercard accepted
               </p>
+                </>
+              )}
             </div>
           )}
         </div>
