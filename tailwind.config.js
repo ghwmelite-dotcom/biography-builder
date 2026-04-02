@@ -37,6 +37,24 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Design token-mapped colors (Layer 1 primitives)
+        gold: {
+          50: 'hsl(var(--gold-50))',
+          100: 'hsl(var(--gold-100))',
+          200: 'hsl(var(--gold-200))',
+          300: 'hsl(var(--gold-300))',
+          400: 'hsl(var(--gold-400))',
+          500: 'hsl(var(--gold-500))',
+          600: 'hsl(var(--gold-600))',
+        },
+        burgundy: {
+          50: 'hsl(var(--burgundy-50))',
+          100: 'hsl(var(--burgundy-100))',
+          200: 'hsl(var(--burgundy-200))',
+          300: 'hsl(var(--burgundy-300))',
+          400: 'hsl(var(--burgundy-400))',
+          500: 'hsl(var(--burgundy-500))',
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -60,6 +78,9 @@ export default {
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+      },
+      boxShadow: {
+        'glow': 'var(--shadow-glow)',
       },
     },
   },

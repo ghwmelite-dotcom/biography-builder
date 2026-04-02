@@ -1,0 +1,93 @@
+/* =============================================================================
+   Layer 1 — Primitives
+   Raw values. Never reference these directly in components — use semantic tokens.
+   ============================================================================= */
+:root {
+  /* Gold scale */
+  --gold-50: 43 100% 96%;
+  --gold-100: 42 93% 88%;
+  --gold-200: 41 87% 76%;
+  --gold-300: 40 80% 64%;
+  --gold-400: 38 65% 53%;   /* anchor: #C9A84C */
+  --gold-500: 36 72% 44%;
+  --gold-600: 33 75% 36%;
+
+  /* Burgundy scale */
+  --burgundy-50: 348 80% 96%;
+  --burgundy-100: 348 70% 88%;
+  --burgundy-200: 348 60% 72%;
+  --burgundy-300: 348 55% 50%;
+  --burgundy-400: 348 52% 40%;  /* anchor: #8B2D42 */
+  --burgundy-500: 348 55% 30%;
+
+  /* Neutral scale */
+  --neutral-0: 0 0% 100%;
+  --neutral-50: 0 0% 98%;
+  --neutral-100: 0 0% 96%;
+  --neutral-200: 0 0% 90%;
+  --neutral-300: 0 0% 80%;
+  --neutral-400: 0 0% 64%;
+  --neutral-500: 0 0% 45%;
+  --neutral-600: 0 0% 32%;
+  --neutral-700: 0 0% 22%;
+  --neutral-800: 0 0% 14%;
+  --neutral-900: 0 0% 9%;
+  --neutral-950: 240 10% 4%;   /* anchor: #09090B */
+
+  /* Spacing (base-8 grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-glow: 0 0 15px 2px hsl(var(--gold-400) / 0.25);
+}
+
+/* =============================================================================
+   Layer 2 — Semantic Tokens
+   Dark theme is default. Light theme overrides via [data-theme="light"].
+   ============================================================================= */
+:root,
+[data-theme="dark"] {
+  --bg-primary: var(--neutral-950);
+  --bg-card: var(--neutral-900);
+  --bg-card-hover: var(--neutral-800);
+  --bg-muted: var(--neutral-800);
+  --text-primary: var(--neutral-50);
+  --text-secondary: var(--neutral-400);
+  --text-muted: var(--neutral-500);
+  --accent-primary: var(--gold-400);
+  --accent-hover: var(--gold-300);
+  --accent-secondary: var(--burgundy-400);
+  --border-default: var(--neutral-800);
+  --border-hover: var(--neutral-700);
+}
+
+[data-theme="light"] {
+  --bg-primary: var(--neutral-0);
+  --bg-card: var(--neutral-0);
+  --bg-card-hover: var(--neutral-50);
+  --bg-muted: var(--neutral-100);
+  --text-primary: var(--neutral-900);
+  --text-secondary: var(--neutral-600);
+  --text-muted: var(--neutral-500);
+  --accent-primary: var(--gold-500);
+  --accent-hover: var(--gold-400);
+  --accent-secondary: var(--burgundy-400);
+  --border-default: var(--neutral-200);
+  --border-hover: var(--neutral-300);
+}
