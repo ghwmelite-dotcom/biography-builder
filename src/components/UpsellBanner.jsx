@@ -47,7 +47,7 @@ export default function UpsellBanner({ context = 'free_export', onUpgrade }) {
   const handleDismiss = () => {
     const updated = { ...dismissed, [context]: true }
     setDismissed(updated)
-    try { sessionStorage.setItem(DISMISS_KEY, JSON.stringify(updated)) } catch {}
+    try { sessionStorage.setItem(DISMISS_KEY, JSON.stringify(updated)) } catch { /* ignore storage errors */ }
   }
 
   return (
