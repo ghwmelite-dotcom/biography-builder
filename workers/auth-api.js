@@ -1854,6 +1854,103 @@ async function handleSubscriptionWebhook(request, env) {
   return json({ ok: true }, 200, request)
 }
 
+// ─── Venues ─────────────────────────────────────────────────────────────────
+
+async function handleListVenues(request, env) {
+  const url = new URL(request.url)
+  const region = url.searchParams.get('region') || ''
+  const verified = url.searchParams.get('verified') || '1'
+
+  let query = 'SELECT id, name, region, city, address, phone, services, rating FROM venues WHERE verified = ?'
+  const binds = [parseInt(verified)]
+
+  if (region) {
+    query += ' AND region = ?'
+    binds.push(region)
+  }
+
+  query += ' ORDER BY name ASC LIMIT 100'
+
+  const { results } = await env.DB.prepare(query).bind(...binds).all()
+  return json({ venues: results || [] }, 200, request)
+}
+
+async function handleAdminCreateVenue(request, env) {
+  const auth = await requireAdmin(request, env)
+  if (auth.error) return auth.error
+
+  const body = await request.json()
+  if (!body.name || !body.region) return error('Missing name or region', 400, request)
+
+  const id = crypto.randomUUID()
+  const safeName = sanitizeInput(body.name)
+  const safeCity = sanitizeInput(body.city)
+  const safeAddress = sanitizeInput(body.address)
+
+  await env.DB.prepare(
+    `INSERT INTO venues (id, name, region, city, address, phone, services, rating, source, verified, lat, lng)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    id, safeName, body.region, safeCity || null, safeAddress || null,
+    body.phone || null, JSON.stringify(body.services || []),
+    body.rating || null, body.source || 'admin', body.verified ? 1 : 0,
+    body.lat || null, body.lng || null
+  ).run()
+
+  await logAudit(env.DB, {
+    userId: auth.userId,
+    action: 'venue.created',
+    resourceType: 'venue',
+    resourceId: id,
+    detail: { name: safeName, region: body.region },
+    ipAddress: getClientIP(request),
+  })
+
+  return json({ id, name: safeName }, 201, request)
+}
+
+async function handleAdminUpdateVenue(request, env, venueId) {
+  const auth = await requireAdmin(request, env)
+  if (auth.error) return auth.error
+
+  const existing = await env.DB.prepare('SELECT id FROM venues WHERE id = ?').bind(venueId).first()
+  if (!existing) return error('Venue not found', 404, request)
+
+  const body = await request.json()
+  const updates = []
+  const binds = []
+
+  if (body.name !== undefined) { updates.push('name = ?'); binds.push(sanitizeInput(body.name)) }
+  if (body.region !== undefined) { updates.push('region = ?'); binds.push(body.region) }
+  if (body.city !== undefined) { updates.push('city = ?'); binds.push(sanitizeInput(body.city)) }
+  if (body.address !== undefined) { updates.push('address = ?'); binds.push(sanitizeInput(body.address)) }
+  if (body.phone !== undefined) { updates.push('phone = ?'); binds.push(body.phone) }
+  if (body.services !== undefined) { updates.push('services = ?'); binds.push(JSON.stringify(body.services)) }
+  if (body.rating !== undefined) { updates.push('rating = ?'); binds.push(body.rating) }
+  if (body.verified !== undefined) { updates.push('verified = ?'); binds.push(body.verified ? 1 : 0) }
+  if (body.lat !== undefined) { updates.push('lat = ?'); binds.push(body.lat) }
+  if (body.lng !== undefined) { updates.push('lng = ?'); binds.push(body.lng) }
+
+  if (updates.length === 0) return error('No fields to update', 400, request)
+
+  updates.push("updated_at = datetime('now')")
+  binds.push(venueId)
+
+  await env.DB.prepare(
+    `UPDATE venues SET ${updates.join(', ')} WHERE id = ?`
+  ).bind(...binds).run()
+
+  await logAudit(env.DB, {
+    userId: auth.userId,
+    action: 'venue.updated',
+    resourceType: 'venue',
+    resourceId: venueId,
+    ipAddress: getClientIP(request),
+  })
+
+  return json({ ok: true }, 200, request)
+}
+
 // ─── Router ─────────────────────────────────────────────────────────────────
 
 export default {
@@ -1913,6 +2010,9 @@ export default {
       const galleryMatch = method === 'GET' && path.match(/^\/gallery\/([^/]+)$/)
       if (galleryMatch) return await handleGetGallery(request, env, galleryMatch[1])
 
+      // Public venues listing
+      if (method === 'GET' && path === '/venues') return await handleListVenues(request, env)
+
       // Admin routes (no JWT, uses X-Admin-Secret)
       if (method === 'POST' && path === '/admin/make-partner') return await handleMakePartner(request, env)
 
@@ -1934,6 +2034,11 @@ export default {
         if (method === 'GET' && path === '/admin/analytics/templates') return await handleAdminAnalyticsTemplates(request, env)
         const adminPrintMatch = path.match(/^\/admin\/print-orders\/([^/]+)$/)
         if (adminPrintMatch && method === 'PUT') return await handleAdminUpdatePrintOrder(request, env, adminPrintMatch[1])
+
+        // Admin venue routes
+        if (method === 'POST' && path === '/admin/venues') return await handleAdminCreateVenue(request, env)
+        const adminVenueMatch = path.match(/^\/admin\/venues\/([^/]+)$/)
+        if (adminVenueMatch && method === 'PUT') return await handleAdminUpdateVenue(request, env, adminVenueMatch[1])
 
         // Admin notifications
         if (method === 'GET' && path === '/admin/notifications') {
