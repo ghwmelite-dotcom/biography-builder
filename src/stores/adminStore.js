@@ -3,6 +3,10 @@ import { apiFetch } from '../utils/apiClient'
 
 export const useAdminStore = create((set, get) => ({
   overview: null,
+  analytics: null,
+  analyticsRevenue: null,
+  analyticsTemplates: null,
+  analyticsLoading: false,
   users: { data: [], total: 0, page: 1, totalPages: 0 },
   orders: { data: [], total: 0, page: 1, totalPages: 0 },
   partners: [],
@@ -12,6 +16,25 @@ export const useAdminStore = create((set, get) => ({
   activeTab: 'overview',
 
   setActiveTab: (tab) => set({ activeTab: tab }),
+
+  fetchAnalytics: async (days = 30) => {
+    set({ analyticsLoading: true })
+    try {
+      const [overviewData, revenueData, templatesData] = await Promise.all([
+        apiFetch(`/admin/analytics/overview?days=${days}`),
+        apiFetch(`/admin/analytics/revenue?days=${days}`),
+        apiFetch(`/admin/analytics/templates?limit=10`),
+      ])
+      set({
+        analytics: overviewData,
+        analyticsRevenue: revenueData.data || [],
+        analyticsTemplates: templatesData.data || [],
+        analyticsLoading: false,
+      })
+    } catch {
+      set({ analyticsLoading: false })
+    }
+  },
 
   fetchOverview: async () => {
     set({ isLoading: true })

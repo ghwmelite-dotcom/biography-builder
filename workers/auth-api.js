@@ -1406,6 +1406,100 @@ async function handleAdminUpdatePrintOrder(request, env, orderId) {
   return json({ ok: true }, 200, request)
 }
 
+// ─── Admin Analytics handlers ───────────────────────────────────────────────
+
+async function handleAdminAnalyticsOverview(request, env) {
+  const auth = await requireAdmin(request, env)
+  if (auth.error) return auth.error
+
+  const url = new URL(request.url)
+  const days = parseInt(url.searchParams.get('days')) || 30
+
+  const period = `datetime('now', '-${days} days')`
+  const prevPeriod = `datetime('now', '-${days * 2} days')`
+
+  // Current period stats
+  const users = await env.DB.prepare(
+    `SELECT COUNT(*) as total FROM users WHERE deleted_at IS NULL`
+  ).first()
+  const newUsers = await env.DB.prepare(
+    `SELECT COUNT(*) as count FROM users WHERE created_at >= ${period} AND deleted_at IS NULL`
+  ).first()
+  const prevNewUsers = await env.DB.prepare(
+    `SELECT COUNT(*) as count FROM users WHERE created_at >= ${prevPeriod} AND created_at < ${period} AND deleted_at IS NULL`
+  ).first()
+
+  const revenue = await env.DB.prepare(
+    `SELECT COALESCE(SUM(amount_pesewas), 0) as total FROM orders WHERE status = 'success' AND paid_at >= ${period} AND deleted_at IS NULL`
+  ).first()
+  const prevRevenue = await env.DB.prepare(
+    `SELECT COALESCE(SUM(amount_pesewas), 0) as total FROM orders WHERE status = 'success' AND paid_at >= ${prevPeriod} AND paid_at < ${period} AND deleted_at IS NULL`
+  ).first()
+
+  const activeSubs = await env.DB.prepare(
+    `SELECT COUNT(*) as count FROM subscriptions WHERE status = 'active'`
+  ).first()
+
+  const printOrders = await env.DB.prepare(
+    `SELECT COUNT(*) as count FROM print_orders WHERE created_at >= ${period} AND deleted_at IS NULL`
+  ).first()
+  const prevPrintOrders = await env.DB.prepare(
+    `SELECT COUNT(*) as count FROM print_orders WHERE created_at >= ${prevPeriod} AND created_at < ${period} AND deleted_at IS NULL`
+  ).first()
+
+  function pctChange(current, previous) {
+    if (!previous) return current > 0 ? 100 : 0
+    return Math.round(((current - previous) / previous) * 100)
+  }
+
+  return json({
+    totalUsers: users.total,
+    newUsers: newUsers.count,
+    newUsersPctChange: pctChange(newUsers.count, prevNewUsers.count),
+    revenuePesewas: revenue.total,
+    revenuePctChange: pctChange(revenue.total, prevRevenue.total),
+    activeSubscriptions: activeSubs.count,
+    printOrders: printOrders.count,
+    printOrdersPctChange: pctChange(printOrders.count, prevPrintOrders.count),
+  }, 200, request)
+}
+
+async function handleAdminAnalyticsRevenue(request, env) {
+  const auth = await requireAdmin(request, env)
+  if (auth.error) return auth.error
+
+  const url = new URL(request.url)
+  const days = parseInt(url.searchParams.get('days')) || 30
+
+  const { results } = await env.DB.prepare(
+    `SELECT DATE(paid_at) as date, SUM(amount_pesewas) as revenue, COUNT(*) as orders
+     FROM orders
+     WHERE status = 'success' AND paid_at >= datetime('now', '-${days} days') AND deleted_at IS NULL
+     GROUP BY DATE(paid_at)
+     ORDER BY date ASC`
+  ).all()
+
+  return json({ data: results || [] }, 200, request)
+}
+
+async function handleAdminAnalyticsTemplates(request, env) {
+  const auth = await requireAdmin(request, env)
+  if (auth.error) return auth.error
+
+  const url = new URL(request.url)
+  const limit = Math.min(20, parseInt(url.searchParams.get('limit')) || 10)
+
+  const { results } = await env.DB.prepare(
+    `SELECT product_type, COUNT(*) as count
+     FROM unlocked_designs
+     GROUP BY product_type
+     ORDER BY count DESC
+     LIMIT ?`
+  ).bind(limit).all()
+
+  return json({ data: results || [] }, 200, request)
+}
+
 // ─── Guest Book handlers ────────────────────────────────────────────────────
 
 async function handleCreateGuestBook(request, env, userId) {
@@ -1835,6 +1929,9 @@ export default {
         if (method === 'POST' && path === '/admin/partners/set-type') return await handleAdminSetPartnerType(request, env)
         if (method === 'GET' && path === '/admin/designs') return await handleAdminDesigns(request, env)
         if (method === 'GET' && path === '/admin/print-orders') return await handleAdminPrintOrders(request, env)
+        if (method === 'GET' && path === '/admin/analytics/overview') return await handleAdminAnalyticsOverview(request, env)
+        if (method === 'GET' && path === '/admin/analytics/revenue') return await handleAdminAnalyticsRevenue(request, env)
+        if (method === 'GET' && path === '/admin/analytics/templates') return await handleAdminAnalyticsTemplates(request, env)
         const adminPrintMatch = path.match(/^\/admin\/print-orders\/([^/]+)$/)
         if (adminPrintMatch && method === 'PUT') return await handleAdminUpdatePrintOrder(request, env, adminPrintMatch[1])
 
