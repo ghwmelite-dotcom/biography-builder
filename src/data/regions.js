@@ -1,0 +1,18 @@
+export const REGIONS = [
+  { slug: 'greater-accra', name: 'Greater Accra', capital: 'Accra', population: '5.5 million', culturalNote: 'Ga-Adangbe and Akan funeral traditions including elaborate funeral celebrations with brass band processions.' },
+  { slug: 'ashanti', name: 'Ashanti', capital: 'Kumasi', population: '5.8 million', culturalNote: 'Akan traditions with Adinkra symbols, kente cloth, and elaborate royal funeral rites for chiefs and queen mothers.' },
+  { slug: 'central', name: 'Central', capital: 'Cape Coast', population: '2.6 million', culturalNote: 'Fante funeral traditions with colorful fantasy coffins and elaborate week-long celebrations.' },
+  { slug: 'western', name: 'Western', capital: 'Sekondi-Takoradi', population: '2.1 million', culturalNote: 'Nzema and Ahanta traditions blending coastal customs with Akan funeral practices.' },
+  { slug: 'eastern', name: 'Eastern', capital: 'Koforidua', population: '3.0 million', culturalNote: 'Akyem and Krobo funeral traditions with rich cultural heritage and community-centered mourning.' },
+  { slug: 'northern', name: 'Northern', capital: 'Tamale', population: '2.5 million', culturalNote: 'Dagomba funeral traditions with Islamic influences, community prayers, and three-day mourning periods.' },
+  { slug: 'volta', name: 'Volta', capital: 'Ho', population: '1.9 million', culturalNote: 'Ewe funeral traditions with drumming, dancing, and wake-keeping that celebrates the life of the departed.' },
+  { slug: 'bono', name: 'Bono', capital: 'Sunyani', population: '1.2 million', culturalNote: 'Bono-Akan funeral customs with traditional drumming and libation pouring ceremonies.' },
+  { slug: 'upper-east', name: 'Upper East', capital: 'Bolgatanga', population: '1.3 million', culturalNote: 'Frafra and Kasena funeral traditions with xylophone music and ancestral rites.' },
+  { slug: 'upper-west', name: 'Upper West', capital: 'Wa', population: '0.9 million', culturalNote: 'Dagaaba and Sissala traditions with elaborate funeral celebrations lasting several days.' },
+  { slug: 'savannah', name: 'Savannah', capital: 'Damongo', population: '0.6 million', culturalNote: 'Gonja traditions with Islamic and traditional burial customs blended together.' },
+  { slug: 'north-east', name: 'North East', capital: 'Nalerigu', population: '0.6 million', culturalNote: 'Mamprusi funeral traditions with community gatherings and traditional rites.' },
+  { slug: 'ahafo', name: 'Ahafo', capital: 'Goaso', population: '0.6 million', culturalNote: 'Akan-Bono traditions with vibrant funeral celebrations and community support systems.' },
+  { slug: 'bono-east', name: 'Bono East', capital: 'Techiman', population: '1.1 million', culturalNote: 'Rich Akan funeral heritage with market-town influences and cross-cultural traditions.' },
+  { slug: 'oti', name: 'Oti', capital: 'Dambai', population: '0.8 million', culturalNote: 'Diverse ethnic traditions including Nkonya and Krachi funeral customs along the Oti River.' },
+  { slug: 'western-north', name: 'Western North', capital: 'Sefwi Wiawso', population: '0.8 million', culturalNote: 'Sefwi traditions with forest-region funeral customs and strong community bonds.' },
+]

@@ -58,6 +58,11 @@ const ObituaryPage = lazy(() => import('./pages/ObituaryPage'))
 const HymnLibraryPage = lazy(() => import('./pages/HymnLibraryPage'))
 const VenueDirectoryPage = lazy(() => import('./pages/VenueDirectoryPage'))
 const OneWeekEditorPage = lazy(() => import('./pages/OneWeekEditorPage'))
+const RegionPage = lazy(() => import('./pages/RegionPage'))
+const BrochureDesignerPage = lazy(() => import('./pages/landing/BrochureDesignerPage'))
+const PosterMakerPage = lazy(() => import('./pages/landing/PosterMakerPage'))
+const MemorialCreatorPage = lazy(() => import('./pages/landing/MemorialCreatorPage'))
+const ProgrammeBookletPage = lazy(() => import('./pages/landing/ProgrammeBookletPage'))
 
 function LoadingFallback() {
   return (
@@ -160,6 +165,11 @@ export default function App() {
               <Route path="/venues" element={<VenueDirectoryPage />} />
               <Route path="/blog" element={<BlogIndexPage />} />
               <Route path="/blog/:slug" element={<BlogPostPage />} />
+              <Route path="/funeral-services/:region" element={<RegionPage />} />
+              <Route path="/funeral-brochure-designer" element={<BrochureDesignerPage />} />
+              <Route path="/funeral-poster-maker" element={<PosterMakerPage />} />
+              <Route path="/memorial-page-creator" element={<MemorialCreatorPage />} />
+              <Route path="/funeral-programme-booklet" element={<ProgrammeBookletPage />} />
             </Routes>
             </PageTransition>
           </Suspense>
