@@ -10,8 +10,10 @@ import { sanitizeInput } from './utils/sanitize.js'
 import { logDonationAudit, getClientIP } from './utils/auditLog.js'
 import { verifyJWT, signJWT } from './utils/jwt.js'
 import { featureFlag } from './utils/featureFlag.js'
-import { createSubaccount, resolveAccount } from './utils/paystack.js'
+import { createSubaccount, resolveAccount, initialiseTransaction } from './utils/paystack.js'
 import { verifyOtp } from './utils/otp.js'
+import { getFxRate } from './utils/fxRate.js'
+import { containsProfanity } from './utils/profanity.js'
 
 const ALLOWED_ORIGINS = [
   'https://funeral-brochure-app.pages.dev',
@@ -414,6 +416,134 @@ export default {
           })
 
           return json({ ok: true, approval_status: 'approved' }, 200, request)
+        }
+
+        if (action === 'charge' && request.method === 'POST') {
+          // Per-IP and per-IP+memorial rate limits
+          const ip = getClientIP(request)
+          const ipKey = `donation:ip:10m:${ip}`
+          const ipMemKey = `donation:ipmem:1h:${ip}:${memorialId}`
+          const ipCount = parseInt(await env.RATE_LIMITS.get(ipKey)) || 0
+          if (ipCount >= 5) return error('Too many donations from this network. Try again shortly.', 429, request)
+          const ipMemCount = parseInt(await env.RATE_LIMITS.get(ipMemKey)) || 0
+          if (ipMemCount >= 3) return error('Too many donations to this memorial from your network.', 429, request)
+
+          const body = await request.json().catch(() => ({}))
+          const {
+            display_amount_minor,
+            display_currency = 'GHS',
+            tip_pesewas = 0,
+            donor = {},
+          } = body
+
+          if (!Number.isInteger(display_amount_minor) || display_amount_minor < 100) {
+            return error('Invalid amount', 400, request)
+          }
+          if (!/^[A-Z]{3}$/.test(display_currency)) return error('Invalid currency', 400, request)
+          if (!Number.isInteger(tip_pesewas) || tip_pesewas < 0) return error('Invalid tip', 400, request)
+
+          if (display_currency !== 'GHS' && !featureFlag(env, 'INTERNATIONAL_DONATIONS_ENABLED', true)) {
+            return error('International donations temporarily unavailable', 503, request)
+          }
+
+          if (!donor.display_name || donor.display_name.length > 60) {
+            return error('Invalid display name', 400, request)
+          }
+          if (containsProfanity(donor.display_name)) {
+            return error('Please choose a different name.', 400, request)
+          }
+          if (!['public', 'anonymous'].includes(donor.visibility || 'public')) {
+            return error('Invalid visibility', 400, request)
+          }
+
+          // Look up memorial
+          const memRow = await env.DB.prepare(
+            `SELECT id, paystack_subaccount_code, approval_status, donation_paused, wall_mode
+             FROM memorials WHERE id = ? AND deleted_at IS NULL`
+          ).bind(memorialId).first()
+          if (!memRow) return error('Memorial not found', 404, request)
+          if (memRow.approval_status !== 'approved') return error('Donations are not enabled for this memorial', 403, request)
+          if (memRow.donation_paused) return error('Donations are paused for this memorial', 403, request)
+
+          // FX
+          let fxRate = 1
+          let amountPesewas
+          if (display_currency === 'GHS') {
+            amountPesewas = display_amount_minor   // both pesewas
+          } else {
+            fxRate = await getFxRate(display_currency, env.RATE_LIMITS, env.OXR_APP_ID)
+            if (!fxRate) return error('Currency conversion temporarily unavailable. Try GHS or try again shortly.', 503, request)
+            // display_amount_minor in cents/pence; minor × (rate from-currency→GHS) gives GHS pesewas
+            amountPesewas = Math.round(display_amount_minor * fxRate)
+          }
+
+          // Server-side tip validation: re-derive expected tip and allow ±1 pesewa drift; tolerate exact 0 (opt-out)
+          const tipDefaultPercent = parseFloat(env.TIP_DEFAULT_PERCENT || '5')
+          const expectedTip = Math.round(amountPesewas * tipDefaultPercent / 100)
+          if (tip_pesewas !== 0 && Math.abs(tip_pesewas - expectedTip) > 1) {
+            return error('Invalid tip amount', 400, request)
+          }
+
+          const totalChargePesewas = amountPesewas + tip_pesewas
+          const donorEmail = donor.email && /\S+@\S+\.\S+/.test(donor.email) ? donor.email : null
+          const synthEmail = donorEmail || `anon-${crypto.randomUUID()}@donations.funeralpress.org`
+
+          const donationId = `don_${crypto.randomUUID()}`
+          const reference = `FP_${donationId}`
+
+          // Insert pending donation
+          await env.DB.prepare(
+            `INSERT INTO donations (
+              id, memorial_id, donor_user_id, donor_display_name, donor_email, donor_phone,
+              donor_country_code, visibility, amount_pesewas, tip_pesewas,
+              display_currency, display_amount_minor, fx_rate_to_ghs,
+              paystack_reference, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            donationId, memorialId, null,
+            sanitizeInput(donor.display_name),
+            donorEmail, donor.phone || null,
+            donor.country_code || null, donor.visibility || 'public',
+            amountPesewas, tip_pesewas,
+            display_currency, display_amount_minor, fxRate,
+            reference, 'pending', Date.now()
+          ).run()
+
+          // Initialise Paystack transaction with subaccount split
+          const paystackRes = await initialiseTransaction({
+            secretKey: env.PAYSTACK_SECRET_KEY,
+            reference,
+            amountPesewas: totalChargePesewas,
+            email: synthEmail,
+            subaccount: memRow.paystack_subaccount_code,
+            bearer: 'subaccount',
+            tipPesewas: tip_pesewas,
+            metadata: {
+              donation_id: donationId,
+              memorial_id: memorialId,
+              tip_pesewas,
+              display_currency,
+              display_amount_minor,
+            },
+          })
+
+          if (!paystackRes.ok) {
+            await env.DB.prepare(`UPDATE donations SET status = 'failed', failure_reason = ? WHERE id = ?`)
+              .bind(paystackRes.error || 'paystack init failed', donationId).run()
+            return error('Could not start payment. Please try again.', 502, request)
+          }
+
+          // Increment rate counters (post-success — we don't penalise donors for our errors)
+          await env.RATE_LIMITS.put(ipKey, String(ipCount + 1), { expirationTtl: 600 })
+          await env.RATE_LIMITS.put(ipMemKey, String(ipMemCount + 1), { expirationTtl: 3600 })
+
+          return json({
+            donation_id: donationId,
+            paystack_reference: reference,
+            authorization_url: paystackRes.authorization_url,
+            amount_in_ghs_pesewas: amountPesewas,
+            fx_rate_used: fxRate,
+          }, 200, request)
         }
 
         if (action === 'settings' && request.method === 'PATCH') {
