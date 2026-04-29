@@ -244,8 +244,74 @@ export default {
           await env.DB.prepare(
             `UPDATE donations SET status = 'failed', failure_reason = ? WHERE paystack_reference = ? AND status = 'pending'`
           ).bind(event.data?.gateway_response || 'failed', event.data?.reference).run()
+
+        } else if (event.event === 'refund.processed') {
+          const ref = event.data?.transaction?.reference || event.data?.reference
+          const donation = await env.DB.prepare(
+            `SELECT id, memorial_id, amount_pesewas, status FROM donations WHERE paystack_reference = ?`
+          ).bind(ref).first()
+          if (!donation) return new Response('ok', { status: 200 })
+
+          // Decrement memorial totals only for previously-succeeded donations
+          if (donation.status === 'succeeded') {
+            await env.DB.prepare(
+              `UPDATE memorials
+               SET total_raised_pesewas = total_raised_pesewas - ?,
+                   total_donor_count = total_donor_count - 1,
+                   updated_at = ?
+               WHERE id = ?`
+            ).bind(donation.amount_pesewas, Date.now(), donation.memorial_id).run()
+
+            // KV write-through (clamp at zero so the public wall never shows negatives)
+            const kvRaw = await env.MEMORIAL_PAGES_KV.get(donation.memorial_id)
+            if (kvRaw) {
+              try {
+                const memData = JSON.parse(kvRaw)
+                memData.donation = {
+                  ...(memData.donation || {}),
+                  total_raised_pesewas: Math.max(0, (memData.donation?.total_raised_pesewas || 0) - donation.amount_pesewas),
+                  total_donor_count: Math.max(0, (memData.donation?.total_donor_count || 0) - 1),
+                }
+                await env.MEMORIAL_PAGES_KV.put(donation.memorial_id, JSON.stringify(memData))
+              } catch {}
+            }
+            try { await env.MEMORIAL_PAGES_KV.delete(`wall:totals:${donation.memorial_id}`) } catch {}
+          }
+
+          await env.DB.prepare(
+            `UPDATE donations SET status = 'refunded', refunded_at = ? WHERE id = ?`
+          ).bind(Date.now(), donation.id).run()
+
+          await logDonationAudit(env.DB, {
+            memorialId: donation.memorial_id,
+            donationId: donation.id,
+            action: 'donation.refund_processed',
+            detail: { reference: ref },
+          })
+
+          try {
+            await env.DB.prepare(
+              `INSERT INTO admin_notifications (type, title, detail, created_at) VALUES (?, ?, ?, ?)`
+            ).bind(
+              'donation.refunded',
+              'Donation refunded',
+              JSON.stringify({ donation_id: donation.id, memorial_id: donation.memorial_id, amount_pesewas: donation.amount_pesewas }),
+              Date.now()
+            ).run()
+          } catch {}
+
+        } else if (event.event === 'charge.dispute.create') {
+          const ref = event.data?.transaction?.reference || event.data?.reference
+          await env.DB.prepare(
+            `UPDATE donations SET status = 'disputed' WHERE paystack_reference = ? AND status = 'succeeded'`
+          ).bind(ref).run()
+
+          try {
+            await env.DB.prepare(
+              `INSERT INTO admin_notifications (type, title, detail, created_at) VALUES (?, ?, ?, ?)`
+            ).bind('donation.disputed', 'Donation dispute opened', JSON.stringify({ reference: ref }), Date.now()).run()
+          } catch {}
         }
-        // refund/dispute events handled in Task 26
 
         return new Response('ok', { status: 200 })
       }
@@ -948,7 +1014,51 @@ export default {
   },
 }
 
-// Wired with full Resend integration in Task 26.
-async function queueDonationReceipt(_env, _donationId) {
-  // no-op stub
+// Sends a donation receipt via Resend and stamps receipt_sent_at.
+// Exported for direct testing; in production it runs inside ctx.waitUntil
+// so receipt failure never blocks the webhook ack to Paystack.
+export async function queueDonationReceipt(env, donationId) {
+  if (!env.RESEND_API_KEY) return
+
+  try {
+    const d = await env.DB.prepare(
+      `SELECT d.id, d.donor_email, d.donor_display_name, d.display_amount_minor, d.display_currency,
+              d.amount_pesewas, d.tip_pesewas, d.created_at, d.paystack_reference,
+              m.id as memorial_id, m.slug
+       FROM donations d JOIN memorials m ON m.id = d.memorial_id
+       WHERE d.id = ?`
+    ).bind(donationId).first()
+    if (!d || !d.donor_email) return
+
+    const kvRaw = await env.MEMORIAL_PAGES_KV.get(d.memorial_id)
+    const deceasedName = (kvRaw && JSON.parse(kvRaw).deceased_name) || 'Memorial'
+
+    const subject = `Your donation to ${deceasedName}'s memorial`
+    const total = (d.display_amount_minor / 100).toFixed(2)
+    const tip = (d.tip_pesewas / 100).toFixed(2)
+    const html = `
+      <p>Thank you, ${d.donor_display_name}, for honouring ${deceasedName}'s memory.</p>
+      <p><strong>Your donation:</strong> ${d.display_currency} ${total}</p>
+      ${Number(tip) > 0 ? `<p><strong>Platform tip:</strong> GHS ${tip}</p>` : ''}
+      <p>Reference: ${d.paystack_reference}</p>
+      <p>This is a confirmation of payment, not a tax receipt.</p>
+      <p><a href="https://funeralpress.org/m/${d.slug}">View memorial</a></p>
+    `
+
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'donations@funeralpress.org',
+        to: d.donor_email,
+        subject,
+        html,
+      }),
+    })
+
+    await env.DB.prepare(`UPDATE donations SET receipt_sent_at = ? WHERE id = ?`)
+      .bind(Date.now(), donationId).run()
+  } catch (e) {
+    console.error('queueDonationReceipt failed', e)
+  }
 }
