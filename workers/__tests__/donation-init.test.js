@@ -167,3 +167,49 @@ describe('POST /memorials/:id/donation/init — self-declared mode', () => {
     expect(res.status).toBe(400)
   })
 })
+
+describe('POST /memorials/:id/donation/init — invite mode', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ status: true, data: { account_name: 'AKOSUA' } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ status: true, data: { subaccount_code: 'ACCT_xyz' } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ code: 'ok', message_id: 'm1' }) })  // Termii SMS
+  })
+
+  it('sends SMS invite and returns pending status', async () => {
+    const env = mockEnv()
+    await env.MEMORIAL_PAGES_KV.put('mem_abc', JSON.stringify({
+      slug: 'akua-mensah', creator_user_id: 42, deceased_name: 'Akua Mensah',
+    }))
+    const jwt = await makeJwt(env, '42')
+    const res = await worker.fetch(await makeReq('mem_abc', {
+      payout_momo_number: '+233244111222',
+      payout_momo_provider: 'mtn',
+      payout_account_name: 'Akosua Mensah',
+      wall_mode: 'full',
+      family_head: { mode: 'invite', phone: '+233207777777', name: 'Akosua' },
+    }, jwt), env)
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.approval_status).toBe('pending')
+    expect(body.invite_sent_to).toContain('+233')
+    // Termii fetch was called
+    const termiiCalled = global.fetch.mock.calls.some(c => String(c[0]).includes('termii'))
+    expect(termiiCalled).toBe(true)
+  })
+
+  it('rejects invite mode without family_head.phone', async () => {
+    const env = mockEnv()
+    await env.MEMORIAL_PAGES_KV.put('mem_abc', JSON.stringify({ slug: 'a', creator_user_id: 42 }))
+    const jwt = await makeJwt(env)
+    const res = await worker.fetch(await makeReq('mem_abc', {
+      payout_momo_number: '+233244111222',
+      payout_momo_provider: 'mtn',
+      payout_account_name: 'X',
+      wall_mode: 'full',
+      family_head: { mode: 'invite' },
+    }, jwt), env)
+    expect(res.status).toBe(400)
+  })
+})

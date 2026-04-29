@@ -205,8 +205,101 @@ export default {
             }, 200, request)
           }
 
-          // mode === 'invite' — handled in Task 19
-          return error('Invite mode not yet implemented', 501, request)
+          // mode === 'invite'
+          if (!family_head.name || family_head.name.length > 100) {
+            return error('Invalid family_head.name', 400, request)
+          }
+
+          // Generate single-use approval token (JWT, scope='family_head_approval', 24h)
+          const tokenPayload = {
+            sub: family_head.phone,
+            memorial_id: memorialId,
+            scope: 'family_head_approval',
+            jti: crypto.randomUUID(),
+            exp: Math.floor(Date.now() / 1000) + 24 * 3600,
+          }
+          const approvalToken = await signJWT(tokenPayload, env.JWT_SECRET)
+
+          // Hash for storage (so DB compromise doesn't expose token)
+          const tokenHashBuf = await crypto.subtle.digest(
+            'SHA-256',
+            new TextEncoder().encode(approvalToken)
+          )
+          const tokenHash = Array.from(new Uint8Array(tokenHashBuf))
+            .map(b => b.toString(16).padStart(2, '0')).join('')
+
+          await env.DB.prepare(
+            `INSERT INTO memorials (
+              id, slug, creator_user_id, family_head_phone, family_head_name, family_head_self_declared,
+              paystack_subaccount_code, payout_momo_number, payout_momo_provider, payout_account_name,
+              wall_mode, goal_amount_pesewas, approval_status, approval_token_hash, approval_token_expires_at,
+              created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            memorialId, slug, Number(auth.sub),
+            family_head.phone, sanitizeInput(family_head.name), 0,
+            sub.subaccount_code, payout_momo_number, payout_momo_provider, sanitizedAccountName,
+            wall_mode, goal_amount_pesewas || null,
+            'pending', tokenHash, tokenPayload.exp * 1000,
+            now, now
+          ).run()
+
+          // KV cache reflects pending state
+          memorialData.donation = {
+            memorial_id: memorialId,
+            enabled: false,
+            wall_mode,
+            goal_amount_pesewas: goal_amount_pesewas || null,
+            total_raised_pesewas: 0,
+            total_donor_count: 0,
+            approval_status: 'pending',
+          }
+          await env.MEMORIAL_PAGES_KV.put(memorialId, JSON.stringify(memorialData))
+
+          // Send SMS via routed provider
+          const { selectProvider } = await import('./utils/phoneRouter.js')
+          const { sendTermiiSms } = await import('./utils/termii.js')
+          const { sendTwilioSms } = await import('./utils/twilioVerify.js')
+
+          let provider
+          try { provider = selectProvider(family_head.phone) } catch { provider = null }
+          if (!provider) return error('Invalid family head phone country code', 400, request)
+
+          const approvalLink = `https://funeralpress.org/approve/${approvalToken}`
+          const smsMessage = `${family_head.name}: You've been named family head for ${memorialData.deceased_name || 'a memorial'} on FuneralPress. Review and approve: ${approvalLink}`
+
+          const sendResult = provider === 'termii'
+            ? await sendTermiiSms({ apiKey: env.TERMII_API_KEY, toE164: family_head.phone, message: smsMessage })
+            : await sendTwilioSms({
+                accountSid: env.TWILIO_ACCOUNT_SID,
+                authToken: env.TWILIO_AUTH_TOKEN,
+                fromNumber: env.TWILIO_FROM_NUMBER,
+                toE164: family_head.phone,
+                message: smsMessage,
+              })
+
+          if (!sendResult.ok) {
+            await logDonationAudit(env.DB, {
+              memorialId, actorUserId: Number(auth.sub),
+              action: 'family_head.invite_sms_failed',
+              detail: { provider, error: sendResult.error },
+              ipAddress: getClientIP(request),
+            })
+          }
+
+          await logDonationAudit(env.DB, {
+            memorialId, actorUserId: Number(auth.sub),
+            action: 'family_head.invited',
+            detail: { phone: family_head.phone, name: family_head.name, expires_at: tokenPayload.exp * 1000 },
+            ipAddress: getClientIP(request),
+          })
+
+          return json({
+            memorial_id: memorialId,
+            approval_status: 'pending',
+            invite_sent_to: family_head.phone,
+            expires_at: tokenPayload.exp * 1000,
+          }, 200, request)
         }
       }
 
