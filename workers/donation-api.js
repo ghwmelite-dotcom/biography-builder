@@ -10,7 +10,7 @@ import { sanitizeInput } from './utils/sanitize.js'
 import { logDonationAudit, getClientIP } from './utils/auditLog.js'
 import { verifyJWT, signJWT } from './utils/jwt.js'
 import { featureFlag } from './utils/featureFlag.js'
-import { createSubaccount, resolveAccount, initialiseTransaction, verifyWebhookSignature, listTransactions, PAYSTACK_WEBHOOK_IPS } from './utils/paystack.js'
+import { createSubaccount, resolveAccount, initialiseTransaction, verifyWebhookSignature, listTransactions, refundTransaction, PAYSTACK_WEBHOOK_IPS } from './utils/paystack.js'
 import { verifyOtp } from './utils/otp.js'
 import { getFxRate } from './utils/fxRate.js'
 import { containsProfanity } from './utils/profanity.js'
@@ -54,6 +54,18 @@ async function authenticate(request, env) {
   if (!h.startsWith('Bearer ')) return null
   const payload = await verifyJWT(h.slice(7), env.JWT_SECRET)
   return payload
+}
+
+// Returns { userId } on success or { error: Response } when caller lacks admin/manager role.
+async function requireAdmin(request, env) {
+  const auth = await authenticate(request, env)
+  if (!auth) return { error: error('Auth required', 401, request) }
+  const row = await env.DB.prepare(
+    `SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
+     WHERE ur.user_id = ? AND r.name IN ('admin', 'manager')`
+  ).bind(auth.sub).first()
+  if (!row) return { error: error('Admin only', 403, request) }
+  return { userId: auth.sub }
 }
 
 async function sha256Hex(str) {
@@ -314,6 +326,85 @@ export default {
         }
 
         return new Response('ok', { status: 200 })
+      }
+
+      // Admin routes — RBAC gated
+      if (path === '/admin/donations' && request.method === 'GET') {
+        const a = await requireAdmin(request, env)
+        if (a.error) return a.error
+
+        const limit = Math.min(parseInt(url.searchParams.get('limit')) || 50, 200)
+        const cursor = url.searchParams.get('cursor')
+        const status = url.searchParams.get('status')
+
+        let cursorTs
+        if (cursor) {
+          try { cursorTs = Number(atob(cursor)) } catch { return error('Invalid cursor', 400, request) }
+          if (Number.isNaN(cursorTs)) return error('Invalid cursor', 400, request)
+        } else {
+          cursorTs = Date.now()
+        }
+
+        const conditions = ['created_at < ?']
+        const args = [cursorTs]
+        if (status) { conditions.push('status = ?'); args.push(status) }
+
+        const result = await env.DB.prepare(
+          `SELECT id, memorial_id, donor_display_name, amount_pesewas, tip_pesewas, display_currency,
+                  display_amount_minor, status, created_at, succeeded_at, refunded_at, paystack_reference
+           FROM donations WHERE ${conditions.join(' AND ')}
+           ORDER BY created_at DESC LIMIT ?`
+        ).bind(...args, limit + 1).all()
+
+        const rows = result.results || []
+        const nextCursor = rows.length > limit ? btoa(String(rows[limit - 1].created_at)) : null
+        if (rows.length > limit) rows.length = limit
+
+        return json({ donations: rows, next_cursor: nextCursor }, 200, request)
+      }
+
+      if (path === '/admin/memorials/donation' && request.method === 'GET') {
+        const a = await requireAdmin(request, env)
+        if (a.error) return a.error
+
+        const result = await env.DB.prepare(
+          `SELECT id, slug, family_head_name, family_head_phone, family_head_self_declared,
+                  wall_mode, approval_status, total_raised_pesewas, total_donor_count, donation_paused,
+                  created_at, approved_at
+           FROM memorials WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 200`
+        ).bind().all()
+
+        return json({ memorials: result.results || [] }, 200, request)
+      }
+
+      const adminRefundMatch = path.match(/^\/admin\/donations\/([^/]+)\/refund$/)
+      if (adminRefundMatch && request.method === 'POST') {
+        const a = await requireAdmin(request, env)
+        if (a.error) return a.error
+        const donationId = adminRefundMatch[1]
+
+        const d = await env.DB.prepare(
+          `SELECT id, paystack_reference, status FROM donations WHERE id = ?`
+        ).bind(donationId).first()
+        if (!d) return error('Donation not found', 404, request)
+        if (d.status !== 'succeeded') return error(`Cannot refund a ${d.status} donation`, 400, request)
+
+        const result = await refundTransaction({
+          secretKey: env.PAYSTACK_SECRET_KEY,
+          transactionRef: d.paystack_reference,
+        })
+        if (!result.ok) return error(`Refund failed: ${result.message || 'unknown'}`, 502, request)
+
+        // Optimistic audit; refund.processed webhook will flip the donation status.
+        await logDonationAudit(env.DB, {
+          donationId,
+          actorUserId: a.userId,
+          action: 'donation.refund_requested',
+          detail: { initiated_at: Date.now() },
+          ipAddress: getClientIP(request),
+        })
+
+        return json({ ok: true, refund_pending: true }, 200, request)
       }
 
       const claimMatch = path.match(/^\/donations\/([^/]+)\/claim$/)
