@@ -2069,6 +2069,123 @@ export default {
 
         return json({ ok: true, provider, expires_in: 600, resend_after: 30 }, 200, request)
       }
+
+      if (path === '/auth/phone/verify' && request.method === 'POST') {
+        if (!featureFlag(env, 'PHONE_AUTH_ENABLED')) {
+          return error('Phone auth temporarily unavailable', 503, request)
+        }
+
+        const body = await request.json().catch(() => ({}))
+        const { phone, code, purpose } = body
+        if (!phone || !code || !purpose) {
+          return error('Missing fields', 400, request)
+        }
+        if (!/^\d{6}$/.test(code)) {
+          return error('Invalid code format', 400, request)
+        }
+
+        const locked = await env.RATE_LIMITS.get(`otp:lockout:${phone}`)
+        if (locked) return error('Phone temporarily locked.', 429, request)
+
+        // Look up most recent unconsumed OTP for (phone, purpose)
+        const row = await env.DB.prepare(
+          `SELECT id, code_hash, expires_at, attempts, consumed_at
+           FROM phone_otps
+           WHERE phone_e164 = ? AND purpose = ? AND consumed_at IS NULL
+           ORDER BY created_at DESC LIMIT 1`
+        ).bind(phone, purpose).first()
+
+        if (!row) return error('No code pending for this phone', 401, request)
+        if (row.expires_at < Date.now()) return error('Code expired. Request a new one.', 401, request)
+        if (row.attempts >= 5) {
+          await env.RATE_LIMITS.put(`otp:lockout:${phone}`, '1', { expirationTtl: 3600 })
+          return error('Too many wrong attempts. Phone locked for 1 hour.', 429, request)
+        }
+
+        // Increment attempts BEFORE the verify check so a wrong code burns an attempt
+        await env.DB.prepare(`UPDATE phone_otps SET attempts = attempts + 1 WHERE id = ?`).bind(row.id).run()
+
+        const ok = await verifyOtp(code, row.code_hash, env.OTP_PEPPER)
+        if (!ok) {
+          await logAudit(env.DB, {
+            action: 'phone_login_failed',
+            detail: { phone, purpose, reason: 'wrong_code' },
+            ipAddress: getClientIP(request),
+          })
+          return error('Wrong code', 401, request)
+        }
+
+        // Mark consumed
+        await env.DB.prepare(`UPDATE phone_otps SET consumed_at = ? WHERE id = ?`)
+          .bind(Date.now(), row.id).run()
+
+        // For non-login purposes (link, family_head_approval), don't issue JWT — caller handles.
+        if (purpose !== 'login') {
+          return json({ ok: true, verified: true }, 200, request)
+        }
+
+        // Find or create user by phone
+        let user = await env.DB.prepare(
+          `SELECT id, email, name, picture, auth_methods, phone_e164 FROM users WHERE phone_e164 = ?`
+        ).bind(phone).first()
+
+        if (!user) {
+          const result = await env.DB.prepare(
+            `INSERT INTO users (email, name, phone_e164, phone_verified_at, auth_methods, created_at)
+             VALUES (?, ?, ?, ?, ?, ?)`
+          ).bind(
+            `phone-${phone}@phone.funeralpress.org`,
+            'Phone user',
+            phone,
+            Date.now(),
+            'phone',
+            Date.now()
+          ).run()
+          user = {
+            id: result.meta.last_row_id,
+            email: null,
+            name: 'Phone user',
+            picture: null,
+            auth_methods: 'phone',
+            phone_e164: phone,
+          }
+        }
+
+        // Issue JWT (1 hour expiry — match existing pattern)
+        const token = await signJWT(
+          { sub: String(user.id), email: user.email, name: user.name, exp: Math.floor(Date.now() / 1000) + 3600 },
+          env.JWT_SECRET
+        )
+
+        // Issue refresh token — matches the existing /auth/google pattern exactly:
+        // randomHex(64) raw token, hashToken for DB storage, 30-day expiry ISO string,
+        // INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at)
+        const refreshRaw = randomHex(64)
+        const refreshHash = await hashToken(refreshRaw)
+        const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString()
+        await env.DB.prepare('INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at) VALUES (?, ?, ?, ?)')
+          .bind(generateId(), user.id, refreshHash, expiresAt).run()
+
+        await logAudit(env.DB, {
+          userId: user.id,
+          action: 'phone_login_success',
+          detail: { phone },
+          ipAddress: getClientIP(request),
+        })
+
+        return json({
+          token,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone_e164: user.phone_e164,
+            auth_methods: user.auth_methods,
+          },
+          refresh_token: refreshRaw,
+        }, 200, request)
+      }
+
       if (method === 'GET' && path.startsWith('/images/')) return await handleImageServe(request, env, path.slice(8))
       if (method === 'POST' && path === '/payments/webhook') return await handlePaymentWebhook(request, env)
       if (method === 'POST' && path === '/subscriptions/webhook') return await handleSubscriptionWebhook(request, env)
