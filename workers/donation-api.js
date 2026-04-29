@@ -10,7 +10,7 @@ import { sanitizeInput } from './utils/sanitize.js'
 import { logDonationAudit, getClientIP } from './utils/auditLog.js'
 import { verifyJWT, signJWT } from './utils/jwt.js'
 import { featureFlag } from './utils/featureFlag.js'
-import { createSubaccount, resolveAccount, initialiseTransaction, verifyWebhookSignature, PAYSTACK_WEBHOOK_IPS } from './utils/paystack.js'
+import { createSubaccount, resolveAccount, initialiseTransaction, verifyWebhookSignature, listTransactions, PAYSTACK_WEBHOOK_IPS } from './utils/paystack.js'
 import { verifyOtp } from './utils/otp.js'
 import { getFxRate } from './utils/fxRate.js'
 import { containsProfanity } from './utils/profanity.js'
@@ -1010,8 +1010,117 @@ export default {
 
   async scheduled(event, env, ctx) {
     if (!featureFlag(env, 'RECONCILIATION_ENABLED')) return
-    // Reconciliation logic added in Task 27
+    ctx.waitUntil(reconcileDay(env))
+    ctx.waitUntil(activatePendingMomoChanges(env))
   },
+}
+
+// Daily safety net — pulls Paystack transactions for the last 24h and
+// reconciles against our donations table to catch dropped webhooks.
+// Exported for direct testing.
+export async function reconcileDay(env) {
+  const to = Date.now()
+  const from = to - 24 * 3600 * 1000
+
+  const result = await listTransactions({
+    secretKey: env.PAYSTACK_SECRET_KEY,
+    fromTimestamp: from,
+    toTimestamp: to,
+    perPage: 100,
+  })
+  if (!result.ok) {
+    console.error('Reconciliation: Paystack list failed', result.message)
+    return
+  }
+
+  const paystackByRef = new Map()
+  for (const t of result.data || []) {
+    paystackByRef.set(t.reference, t)
+  }
+
+  const ours = await env.DB.prepare(
+    `SELECT id, paystack_reference, status, memorial_id, amount_pesewas FROM donations WHERE created_at >= ? AND created_at < ?`
+  ).bind(from, to).all()
+
+  let mismatches = 0
+  for (const row of ours.results || []) {
+    const ps = paystackByRef.get(row.paystack_reference)
+
+    if (!ps) {
+      if (row.status === 'pending') {
+        await env.DB.prepare(`UPDATE donations SET status = 'failed', failure_reason = ? WHERE id = ?`)
+          .bind('reconciliation: not found at Paystack', row.id).run()
+        mismatches++
+      }
+      continue
+    }
+
+    if (ps.status === 'success' && row.status === 'pending') {
+      // Webhook missed — promote and update memorial totals
+      await env.DB.prepare(
+        `UPDATE donations SET status = 'succeeded', succeeded_at = ?, paystack_fee_pesewas = ?, paystack_transaction_id = ? WHERE id = ?`
+      ).bind(Date.now(), ps.fees || 0, String(ps.id || ''), row.id).run()
+
+      await env.DB.prepare(
+        `UPDATE memorials
+         SET total_raised_pesewas = total_raised_pesewas + ?,
+             total_donor_count = total_donor_count + 1,
+             last_donation_at = ?,
+             updated_at = ?
+         WHERE id = ?`
+      ).bind(row.amount_pesewas, Date.now(), Date.now(), row.memorial_id).run()
+
+      try { await env.MEMORIAL_PAGES_KV.delete(`wall:totals:${row.memorial_id}`) } catch {}
+      mismatches++
+    }
+  }
+
+  if (mismatches > 0) {
+    try {
+      await env.DB.prepare(
+        `INSERT INTO admin_notifications (type, title, detail, created_at) VALUES (?, ?, ?, ?)`
+      ).bind(
+        'reconciliation.mismatches',
+        `Reconciliation found ${mismatches} mismatches`,
+        JSON.stringify({ from, to, count: mismatches }),
+        Date.now()
+      ).run()
+    } catch {}
+  }
+}
+
+// Promotes any pending payout MoMo changes whose 24h cool-down has elapsed.
+// Exported for direct testing. In production this would also call Paystack
+// to update the subaccount's account_number — left for follow-up.
+export async function activatePendingMomoChanges(env) {
+  const due = await env.DB.prepare(
+    `SELECT id, pending_payout_momo_number, pending_payout_momo_provider, pending_payout_account_name
+     FROM memorials
+     WHERE pending_payout_effective_at IS NOT NULL AND pending_payout_effective_at <= ?`
+  ).bind(Date.now()).all()
+
+  for (const m of due.results || []) {
+    await env.DB.prepare(
+      `UPDATE memorials
+       SET payout_momo_number = ?, payout_momo_provider = ?, payout_account_name = ?,
+           pending_payout_momo_number = NULL, pending_payout_momo_provider = NULL,
+           pending_payout_account_name = NULL, pending_payout_effective_at = NULL,
+           updated_at = ?
+       WHERE id = ?`
+    ).bind(
+      m.pending_payout_momo_number,
+      m.pending_payout_momo_provider,
+      m.pending_payout_account_name,
+      Date.now(),
+      m.id
+    ).run()
+
+    await logDonationAudit(env.DB, {
+      memorialId: m.id,
+      action: 'memorial.payout_changed',
+      detail: { stage: 'cooldown_complete' },
+    })
+  }
 }
 
 // Sends a donation receipt via Resend and stamps receipt_sent_at.
