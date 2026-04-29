@@ -185,6 +185,46 @@ export const useAuthStore = create((set, get) => ({
 
   setSyncing: (v) => set({ isSyncing: v }),
 
+  // Establish a session from any auth handshake response (phone OTP verify, etc.)
+  // Mirrors the post-success path of handleGoogleLogin without re-doing Google checks.
+  setSession: (data) => {
+    if (!data || !data.accessToken) return
+    const state = {
+      user: normalizeUser(data.user),
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+    }
+    set({ ...state, isLoading: false })
+    saveAuth({ ...state, hasMigrated: get().hasMigrated })
+
+    // Hydrate purchase state from the user payload (best-effort, same as Google flow)
+    import('../stores/purchaseStore').then(({ usePurchaseStore }) => {
+      usePurchaseStore.getState().hydrateFromUser(data.user)
+    }).catch(() => {})
+  },
+
+  // Link a verified phone to the currently-authenticated account.
+  // Caller has already collected an OTP code via /auth/phone/send-otp + /auth/phone/verify.
+  linkPhone: async (phone, code) => {
+    const { phoneAuthApi } = await import('../utils/donationApi.js')
+    const res = await phoneAuthApi.link(phone, code)
+    set(s => {
+      const updatedUser = {
+        ...(s.user || {}),
+        phone_e164: res.phone_e164,
+        auth_methods: res.auth_methods,
+      }
+      saveAuth({
+        user: updatedUser,
+        accessToken: s.accessToken,
+        refreshToken: s.refreshToken,
+        hasMigrated: s.hasMigrated,
+      })
+      return { user: updatedUser }
+    })
+    return res
+  },
+
   // Fetch fresh user data from the server (updates isAdmin, isPartner, etc.)
   refreshUser: async () => {
     const token = await get().getToken()
