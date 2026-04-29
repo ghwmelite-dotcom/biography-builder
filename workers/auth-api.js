@@ -2070,6 +2070,50 @@ export default {
         return json({ ok: true, provider, expires_in: 600, resend_after: 30 }, 200, request)
       }
 
+      /**
+       * Verify an OTP for a given (phone, purpose) WITHOUT issuing JWT.
+       * Returns { ok: true } on success or { ok: false, response: <Response> } on failure.
+       */
+      async function verifyOtpForPurpose(env, request, phone, code, purpose) {
+        if (!/^\d{6}$/.test(code || '')) {
+          return { ok: false, response: error('Invalid code format', 400, request) }
+        }
+
+        const locked = await env.RATE_LIMITS.get(`otp:lockout:${phone}`)
+        if (locked) {
+          return { ok: false, response: error('Phone temporarily locked.', 429, request) }
+        }
+
+        const row = await env.DB.prepare(
+          `SELECT id, code_hash, expires_at, attempts, consumed_at
+           FROM phone_otps
+           WHERE phone_e164 = ? AND purpose = ? AND consumed_at IS NULL
+           ORDER BY created_at DESC LIMIT 1`
+        ).bind(phone, purpose).first()
+
+        if (!row) return { ok: false, response: error('No code pending for this phone', 401, request) }
+        if (row.expires_at < Date.now()) return { ok: false, response: error('Code expired. Request a new one.', 401, request) }
+        if (row.attempts >= 5) {
+          await env.RATE_LIMITS.put(`otp:lockout:${phone}`, '1', { expirationTtl: 3600 })
+          return { ok: false, response: error('Too many wrong attempts. Phone locked for 1 hour.', 429, request) }
+        }
+
+        await env.DB.prepare(`UPDATE phone_otps SET attempts = attempts + 1 WHERE id = ?`).bind(row.id).run()
+
+        const ok = await verifyOtp(code, row.code_hash, env.OTP_PEPPER)
+        if (!ok) {
+          await logAudit(env.DB, {
+            action: 'phone_otp_verify_failed',
+            detail: { phone, purpose, reason: 'wrong_code' },
+            ipAddress: getClientIP(request),
+          })
+          return { ok: false, response: error('Wrong code', 401, request) }
+        }
+
+        await env.DB.prepare(`UPDATE phone_otps SET consumed_at = ? WHERE id = ?`).bind(Date.now(), row.id).run()
+        return { ok: true }
+      }
+
       if (path === '/auth/phone/verify' && request.method === 'POST') {
         if (!featureFlag(env, 'PHONE_AUTH_ENABLED')) {
           return error('Phone auth temporarily unavailable', 503, request)
@@ -2080,44 +2124,9 @@ export default {
         if (!phone || !code || !purpose) {
           return error('Missing fields', 400, request)
         }
-        if (!/^\d{6}$/.test(code)) {
-          return error('Invalid code format', 400, request)
-        }
 
-        const locked = await env.RATE_LIMITS.get(`otp:lockout:${phone}`)
-        if (locked) return error('Phone temporarily locked.', 429, request)
-
-        // Look up most recent unconsumed OTP for (phone, purpose)
-        const row = await env.DB.prepare(
-          `SELECT id, code_hash, expires_at, attempts, consumed_at
-           FROM phone_otps
-           WHERE phone_e164 = ? AND purpose = ? AND consumed_at IS NULL
-           ORDER BY created_at DESC LIMIT 1`
-        ).bind(phone, purpose).first()
-
-        if (!row) return error('No code pending for this phone', 401, request)
-        if (row.expires_at < Date.now()) return error('Code expired. Request a new one.', 401, request)
-        if (row.attempts >= 5) {
-          await env.RATE_LIMITS.put(`otp:lockout:${phone}`, '1', { expirationTtl: 3600 })
-          return error('Too many wrong attempts. Phone locked for 1 hour.', 429, request)
-        }
-
-        // Increment attempts BEFORE the verify check so a wrong code burns an attempt
-        await env.DB.prepare(`UPDATE phone_otps SET attempts = attempts + 1 WHERE id = ?`).bind(row.id).run()
-
-        const ok = await verifyOtp(code, row.code_hash, env.OTP_PEPPER)
-        if (!ok) {
-          await logAudit(env.DB, {
-            action: 'phone_login_failed',
-            detail: { phone, purpose, reason: 'wrong_code' },
-            ipAddress: getClientIP(request),
-          })
-          return error('Wrong code', 401, request)
-        }
-
-        // Mark consumed
-        await env.DB.prepare(`UPDATE phone_otps SET consumed_at = ? WHERE id = ?`)
-          .bind(Date.now(), row.id).run()
+        const verifyResult = await verifyOtpForPurpose(env, request, phone, code, purpose)
+        if (!verifyResult.ok) return verifyResult.response
 
         // For non-login purposes (link, family_head_approval), don't issue JWT — caller handles.
         if (purpose !== 'login') {
@@ -2184,6 +2193,73 @@ export default {
           },
           refresh_token: refreshRaw,
         }, 200, request)
+      }
+
+      if (path === '/auth/phone/link' && request.method === 'POST') {
+        if (!featureFlag(env, 'PHONE_AUTH_ENABLED')) {
+          return error('Phone auth temporarily unavailable', 503, request)
+        }
+        const auth = await authenticate(request, env)
+        if (!auth) return error('Auth required', 401, request)
+
+        const body = await request.json().catch(() => ({}))
+        const { phone, code } = body
+        if (!phone || !code) return error('Missing fields', 400, request)
+        if (!/^\+\d{6,15}$/.test(phone)) return error('Invalid phone format', 400, request)
+
+        // Conflict check — phone owned by another user
+        const existing = await env.DB.prepare(
+          `SELECT id FROM users WHERE phone_e164 = ? AND id != ?`
+        ).bind(phone, auth.sub).first()
+        if (existing) {
+          return json({ error: 'Phone already linked to another account', code: 'phone_already_linked' }, 409, request)
+        }
+
+        const verifyResult = await verifyOtpForPurpose(env, request, phone, code, 'link')
+        if (!verifyResult.ok) return verifyResult.response
+
+        const u = await env.DB.prepare(`SELECT auth_methods FROM users WHERE id = ?`).bind(auth.sub).first()
+        const methods = new Set((u?.auth_methods || 'google').split(',').filter(Boolean))
+        methods.add('phone')
+        const methodsStr = Array.from(methods).join(',')
+
+        await env.DB.prepare(
+          `UPDATE users SET phone_e164 = ?, phone_verified_at = ?, auth_methods = ? WHERE id = ?`
+        ).bind(phone, Date.now(), methodsStr, auth.sub).run()
+
+        await logAudit(env.DB, {
+          userId: auth.sub,
+          action: 'phone_linked',
+          detail: { phone },
+          ipAddress: getClientIP(request),
+        })
+
+        return json({ ok: true, phone_e164: phone, auth_methods: methodsStr }, 200, request)
+      }
+
+      if (path === '/auth/phone/unlink' && request.method === 'POST') {
+        const auth = await authenticate(request, env)
+        if (!auth) return error('Auth required', 401, request)
+
+        const u = await env.DB.prepare(`SELECT auth_methods FROM users WHERE id = ?`).bind(auth.sub).first()
+        const methods = new Set((u?.auth_methods || '').split(',').filter(Boolean))
+        if (!methods.has('google')) {
+          return error('Cannot unlink phone — would leave you with no sign-in method.', 400, request)
+        }
+        methods.delete('phone')
+        const methodsStr = Array.from(methods).join(',')
+
+        await env.DB.prepare(
+          `UPDATE users SET phone_e164 = NULL, phone_verified_at = NULL, auth_methods = ? WHERE id = ?`
+        ).bind(methodsStr, auth.sub).run()
+
+        await logAudit(env.DB, {
+          userId: auth.sub,
+          action: 'phone_unlinked',
+          ipAddress: getClientIP(request),
+        })
+
+        return json({ ok: true, auth_methods: methodsStr }, 200, request)
       }
 
       if (method === 'GET' && path.startsWith('/images/')) return await handleImageServe(request, env, path.slice(8))
