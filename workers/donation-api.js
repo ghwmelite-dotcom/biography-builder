@@ -10,6 +10,7 @@ import { sanitizeInput } from './utils/sanitize.js'
 import { logDonationAudit, getClientIP } from './utils/auditLog.js'
 import { verifyJWT, signJWT } from './utils/jwt.js'
 import { featureFlag } from './utils/featureFlag.js'
+import { createSubaccount, resolveAccount } from './utils/paystack.js'
 
 const ALLOWED_ORIGINS = [
   'https://funeral-brochure-app.pages.dev',
@@ -79,7 +80,136 @@ export default {
     }
 
     try {
-      // Routes will be added in subsequent tasks (18-30).
+      const memorialMatch = path.match(/^\/memorials\/([^/]+)\/donation\/(init|approve|reject|settings|wall|totals|charge)$/)
+      if (memorialMatch) {
+        const [, memorialId, action] = memorialMatch
+
+        if (action === 'init' && request.method === 'POST') {
+          const auth = await authenticate(request, env)
+          if (!auth) return error('Auth required', 401, request)
+
+          const body = await request.json().catch(() => ({}))
+          const {
+            payout_momo_number,
+            payout_momo_provider,
+            payout_account_name,
+            wall_mode,
+            goal_amount_pesewas,
+            family_head,
+          } = body
+
+          // Validation
+          if (!payout_momo_number || !/^\+\d{6,15}$/.test(payout_momo_number)) {
+            return error('Invalid payout MoMo number', 400, request)
+          }
+          if (!['mtn', 'vodafone', 'airteltigo'].includes(payout_momo_provider)) {
+            return error('Invalid MoMo provider', 400, request)
+          }
+          if (!payout_account_name || payout_account_name.length > 100) {
+            return error('Invalid account name', 400, request)
+          }
+          if (!['full', 'names_only', 'private'].includes(wall_mode)) {
+            return error('Invalid wall_mode', 400, request)
+          }
+          if (goal_amount_pesewas !== undefined && goal_amount_pesewas !== null) {
+            if (!Number.isInteger(goal_amount_pesewas) || goal_amount_pesewas < 100) {
+              return error('Invalid goal amount', 400, request)
+            }
+          }
+          if (!family_head || !['self', 'invite'].includes(family_head.mode)) {
+            return error('Invalid family_head.mode', 400, request)
+          }
+          if (family_head.mode === 'invite' && !/^\+\d{6,15}$/.test(family_head.phone || '')) {
+            return error('Invalid family_head.phone for invite mode', 400, request)
+          }
+
+          // Fetch memorial from KV; verify creator
+          const kvRaw = await env.MEMORIAL_PAGES_KV.get(memorialId)
+          if (!kvRaw) return error('Memorial not found', 404, request)
+          let memorialData
+          try { memorialData = JSON.parse(kvRaw) } catch { return error('Memorial corrupted', 500, request) }
+          if (Number(memorialData.creator_user_id) !== Number(auth.sub)) {
+            return error('Only the memorial creator can enable donations', 403, request)
+          }
+
+          // Verify MoMo with Paystack
+          const resolved = await resolveAccount({
+            secretKey: env.PAYSTACK_SECRET_KEY,
+            momoNumber: payout_momo_number,
+            providerCode: { mtn: 'MTN', vodafone: 'VOD', airteltigo: 'ATL' }[payout_momo_provider],
+          })
+          if (!resolved.ok) {
+            return error('Could not verify MoMo number. Please check the number and provider.', 400, request)
+          }
+
+          // Create Paystack subaccount
+          const sub = await createSubaccount({
+            secretKey: env.PAYSTACK_SECRET_KEY,
+            businessName: `${memorialData.deceased_name || 'Memorial'} Donations`,
+            momoNumber: payout_momo_number,
+            provider: payout_momo_provider,
+            accountName: payout_account_name,
+          })
+          if (!sub.ok) {
+            return error(`Could not create payout account: ${sub.error || 'unknown'}`, 502, request)
+          }
+
+          const now = Date.now()
+          const slug = memorialData.slug || memorialId
+          const sanitizedAccountName = sanitizeInput(payout_account_name)
+
+          if (family_head.mode === 'self') {
+            // Self-declared — immediate approval
+            await env.DB.prepare(
+              `INSERT INTO memorials (
+                id, slug, creator_user_id, family_head_user_id, family_head_phone, family_head_name,
+                family_head_self_declared, paystack_subaccount_code, payout_momo_number, payout_momo_provider,
+                payout_account_name, wall_mode, goal_amount_pesewas, approval_status, approved_at, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ).bind(
+              memorialId, slug, Number(auth.sub), Number(auth.sub),
+              memorialData.creator_phone || null, memorialData.creator_name || null,
+              1, sub.subaccount_code, payout_momo_number, payout_momo_provider,
+              sanitizedAccountName, wall_mode, goal_amount_pesewas || null,
+              'approved', now, now, now
+            ).run()
+
+            // Update KV cache
+            memorialData.donation = {
+              memorial_id: memorialId,
+              enabled: true,
+              wall_mode,
+              goal_amount_pesewas: goal_amount_pesewas || null,
+              total_raised_pesewas: 0,
+              total_donor_count: 0,
+              approval_status: 'approved',
+            }
+            await env.MEMORIAL_PAGES_KV.put(memorialId, JSON.stringify(memorialData))
+
+            await logDonationAudit(env.DB, {
+              memorialId,
+              actorUserId: Number(auth.sub),
+              action: 'family_head.self_declared',
+              detail: {
+                declared_name: payout_account_name,
+                declared_phone: family_head.phone || null,
+                wall_mode, goal_amount_pesewas,
+              },
+              ipAddress: getClientIP(request),
+            })
+
+            return json({
+              memorial_id: memorialId,
+              approval_status: 'approved',
+              subaccount_code: sub.subaccount_code,
+            }, 200, request)
+          }
+
+          // mode === 'invite' — handled in Task 19
+          return error('Invite mode not yet implemented', 501, request)
+        }
+      }
+
       return error('Not found', 404, request)
     } catch (err) {
       console.error('donation-api unhandled', err)
