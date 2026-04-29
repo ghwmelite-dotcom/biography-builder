@@ -149,6 +149,52 @@ export default {
     }
 
     try {
+      const claimMatch = path.match(/^\/donations\/([^/]+)\/claim$/)
+      if (claimMatch && request.method === 'POST') {
+        const donationId = claimMatch[1]
+        const auth = await authenticate(request, env)
+        if (!auth) return error('Auth required', 401, request)
+
+        const body = await request.json().catch(() => ({}))
+        const { claim_token } = body
+
+        const donation = await env.DB.prepare(
+          `SELECT id, donor_user_id, donor_email, amount_pesewas, status FROM donations WHERE id = ?`
+        ).bind(donationId).first()
+
+        if (!donation) return error('Donation not found', 404, request)
+        if (donation.status !== 'succeeded') return error('Donation not yet completed', 400, request)
+
+        // Already claimed?
+        if (donation.donor_user_id) {
+          if (String(donation.donor_user_id) === String(auth.sub)) {
+            return json({ claimed: true, already: true }, 200, request)
+          }
+          return error('Donation already claimed', 409, request)
+        }
+
+        // Match by email (preferred) or claim_token (alternative)
+        const userRow = await env.DB.prepare(`SELECT id, email FROM users WHERE id = ?`).bind(auth.sub).first()
+        if (donation.donor_email && userRow?.email !== donation.donor_email && !claim_token) {
+          return error('Donation email does not match your account', 403, request)
+        }
+
+        await env.DB.prepare(`UPDATE donations SET donor_user_id = ? WHERE id = ?`)
+          .bind(auth.sub, donationId).run()
+
+        await env.DB.prepare(
+          `INSERT INTO donor_profiles (user_id, total_donated_pesewas, total_donations_count, last_donated_at, created_at, updated_at)
+           VALUES (?, ?, 1, ?, ?, ?)
+           ON CONFLICT(user_id) DO UPDATE SET
+             total_donated_pesewas = total_donated_pesewas + excluded.total_donated_pesewas,
+             total_donations_count = total_donations_count + 1,
+             last_donated_at = excluded.last_donated_at,
+             updated_at = excluded.updated_at`
+        ).bind(auth.sub, donation.amount_pesewas, Date.now(), Date.now(), Date.now()).run()
+
+        return json({ claimed: true, donor_total_pesewas: donation.amount_pesewas }, 200, request)
+      }
+
       const memorialMatch = path.match(/^\/memorials\/([^/]+)\/donation\/(init|approve|reject|settings|wall|totals|charge)$/)
       if (memorialMatch) {
         const [, memorialId, action] = memorialMatch
