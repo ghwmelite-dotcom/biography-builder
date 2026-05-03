@@ -15,18 +15,22 @@ import { verifyOtp } from './utils/otp.js'
 import { getFxRate } from './utils/fxRate.js'
 import { containsProfanity } from './utils/profanity.js'
 
-const ALLOWED_ORIGINS = [
+const PROD_ORIGINS = [
   'https://funeral-brochure-app.pages.dev',
   'https://funeralpress.org',
   'https://www.funeralpress.org',
-  'http://localhost:5173',
-  'http://localhost:4173',
 ]
+const DEV_ORIGINS = ['http://localhost:5173', 'http://localhost:4173']
+
+function allowedOrigins(env) {
+  return env?.ENVIRONMENT === 'dev' ? [...PROD_ORIGINS, ...DEV_ORIGINS] : PROD_ORIGINS
+}
 
 function corsOrigin(req) {
   const o = req.headers.get('Origin') || ''
-  if (ALLOWED_ORIGINS.includes(o) || o.endsWith('.funeral-brochure-app.pages.dev')) return o
-  return ALLOWED_ORIGINS[0]
+  const env = req.__env
+  if (allowedOrigins(env).includes(o) || o.endsWith('.funeral-brochure-app.pages.dev')) return o
+  return PROD_ORIGINS[0]
 }
 
 function corsHeaders(req) {
@@ -136,6 +140,8 @@ async function verifyApprovalRequest(env, request, memorialId, token, otpCode, p
 
 export default {
   async fetch(request, env, ctx) {
+    // Stash env on request so CORS helpers can gate localhost behind ENVIRONMENT=dev
+    request.__env = env
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(request) })
     }

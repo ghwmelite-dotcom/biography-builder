@@ -12,21 +12,25 @@ import { featureFlag } from './utils/featureFlag.js'
 // FuneralPress Auth API Worker
 // Bindings: DB (D1), IMAGES (R2), JWT_SECRET (secret), GOOGLE_CLIENT_ID (var)
 
-const ALLOWED_ORIGINS = [
+const PROD_ORIGINS = [
   'https://funeral-brochure-app.pages.dev',
   'https://funeralpress.org',
   'https://www.funeralpress.org',
-  'http://localhost:5173',
-  'http://localhost:4173',
 ]
+const DEV_ORIGINS = ['http://localhost:5173', 'http://localhost:4173']
+
+function allowedOrigins(env) {
+  return env?.ENVIRONMENT === 'dev' ? [...PROD_ORIGINS, ...DEV_ORIGINS] : PROD_ORIGINS
+}
 
 function getCorsOrigin(request) {
   const origin = request.headers.get('Origin') || ''
+  const env = request.__env
   // Allow any *.funeral-brochure-app.pages.dev preview URL
-  if (ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.funeral-brochure-app.pages.dev')) {
+  if (allowedOrigins(env).includes(origin) || origin.endsWith('.funeral-brochure-app.pages.dev')) {
     return origin
   }
-  return ALLOWED_ORIGINS[0]
+  return PROD_ORIGINS[0]
 }
 
 function corsHeaders(request) {
@@ -1941,6 +1945,8 @@ async function handleAdminUpdateVenue(request, env, venueId) {
 
 export default {
   async fetch(request, env) {
+    // Stash env on request so CORS helpers can gate localhost behind ENVIRONMENT=dev
+    request.__env = env
     const url = new URL(request.url)
     const path = url.pathname
     const method = request.method
