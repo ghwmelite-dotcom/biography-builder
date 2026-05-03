@@ -13,8 +13,7 @@ database_id = "eab2488e-18cd-4920-adf8-7db724facee5"
 
 [[kv_namespaces]]
 binding = "MEMORIAL_PAGES_KV"
-# Replace with the same id as auth-api / memorial-page-api MEMORIAL_PAGES_KV before deploy.
-id = "REPLACE_BEFORE_DEPLOY_MEMORIAL_PAGES_KV"
+id = "314cc22d0bb6497d85280eccf10e54bb"
 
 [[kv_namespaces]]
 binding = "RATE_LIMITS"
@@ -22,8 +21,7 @@ id = "3cf6b47818c04ca8828461650478a6c1"
 
 [[kv_namespaces]]
 binding = "OTP_KV"
-# Same OTP_KV namespace as auth-api. Replace before deploy.
-id = "REPLACE_BEFORE_DEPLOY_OTP_KV"
+id = "a1ac0eaccf854a688954d90859570738"
 
 [vars]
 ENVIRONMENT = "production"

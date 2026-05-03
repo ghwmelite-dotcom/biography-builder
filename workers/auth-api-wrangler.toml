@@ -29,9 +29,7 @@ id = "3cf6b47818c04ca8828461650478a6c1"
 
 [[kv_namespaces]]
 binding = "OTP_KV"
-# Create with: npx wrangler kv:namespace create OTP_KV
-# Replace this placeholder id with the real one before deploy.
-id = "REPLACE_BEFORE_DEPLOY_OTP_KV"
+id = "a1ac0eaccf854a688954d90859570738"
 
 # ─── Secrets required for phone-auth routes (set via `wrangler secret put`) ───
 # TERMII_API_KEY            — Termii API key for Ghana SMS
