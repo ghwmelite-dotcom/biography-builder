@@ -129,6 +129,7 @@ export default function PartnerDashboardPage() {
     if (!user.isPartner) { navigate('/'); return }
     fetchProfile()
     fetchReferrals()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   const tier = useMemo(() => getTier(profile?.totalReferrals || 0), [profile?.totalReferrals])

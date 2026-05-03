@@ -127,6 +127,7 @@ export default function OverviewTab() {
   useEffect(() => {
     fetchOverview()
     fetchAnalytics(30)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loading = isLoading && !overview

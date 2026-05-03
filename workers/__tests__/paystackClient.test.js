@@ -3,8 +3,6 @@ import {
   createSubaccount,
   initialiseTransaction,
   refundTransaction,
-  listTransactions,
-  resolveAccount,
   verifyWebhookSignature,
   PAYSTACK_WEBHOOK_IPS,
 } from '../utils/paystack.js'

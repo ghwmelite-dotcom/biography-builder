@@ -17,11 +17,11 @@ function mockEnv(overrides = {}) {
     CORS_ORIGIN: 'http://localhost:5173',
     OTP_KV: {
       get: async (k) => kvStore.get(k) || null,
-      put: async (k, v, opts) => { kvStore.set(k, v); return undefined },
+      put: async (k, v, _opts) => { kvStore.set(k, v); return undefined },
     },
     RATE_LIMITS: {
       get: async (k) => kvStore.get(`rl:${k}`) || null,
-      put: async (k, v, opts) => { kvStore.set(`rl:${k}`, v) },
+      put: async (k, v, _opts) => { kvStore.set(`rl:${k}`, v) },
     },
     DB: {
       prepare: (sql) => ({

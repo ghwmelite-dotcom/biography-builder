@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import worker from '../auth-api.js'
 import { hashOtp } from '../utils/otp.js'
 import { signJWT } from '../utils/jwt.js'
@@ -19,7 +19,7 @@ function mockEnv(overrides = {}) {
     },
     DB: {
       prepare: (sql) => ({
-        bind: (...args) => ({
+        bind: (..._args) => ({
           run: async () => ({ meta: {} }),
           first: async () => {
             if (sql.includes('FROM phone_otps')) return dbState.otpRow

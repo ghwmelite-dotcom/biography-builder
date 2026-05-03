@@ -6,7 +6,7 @@ const LOCALE_TO_CURRENCY = {
   IE: 'EUR', PT: 'EUR', BE: 'EUR', AT: 'EUR', FI: 'EUR',
 }
 
-const SYMBOLS = { GHS: 'GHS ', GBP: '£', USD: '$', CAD: 'C$', EUR: '€', NGN: '₦' }
+const SYMBOLS = { GHS: 'GHS ', GBP: '£', USD: '$', CAD: 'C$', EUR: '€', NGN: '₦' }
 
 const QUICK_AMOUNTS_MAJOR = {
   GHS: [50, 100, 200, 500],
@@ -28,7 +28,7 @@ export function detectCurrency() {
 
 export function formatMinor(minor, currency) {
   const major = (minor / 100).toFixed(2)
-  return `${SYMBOLS[currency] || `${currency} `}${major}`
+  return `${SYMBOLS[currency] || `${currency} `}${major}`
 }
 
 export function quickAmounts(currency) {

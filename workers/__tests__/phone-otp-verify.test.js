@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import worker from '../auth-api.js'
 import { hashOtp } from '../utils/otp.js'
 
@@ -51,7 +51,7 @@ function makeMockDb(state) {
   }
 }
 
-async function seedOtp(state, code, pepper, purpose = 'login', overrides = {}) {
+async function seedOtp(state, code, pepper, _purpose = 'login', overrides = {}) {
   state.otpRow = {
     id: 1,
     code_hash: await hashOtp(code, pepper),

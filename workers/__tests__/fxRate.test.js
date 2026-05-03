@@ -5,7 +5,7 @@ function mockKV() {
   const store = new Map()
   return {
     get: vi.fn(async (k) => store.get(k) || null),
-    put: vi.fn(async (k, v, opts) => store.set(k, v)),
+    put: vi.fn(async (k, v, _opts) => store.set(k, v)),
     store,
   }
 }

@@ -26,8 +26,8 @@ function mockEnv(overrides = {}) {
       put: async (k, v) => rateLimits.set(k, v),
     },
     OTP_KV: {
-      get: async (k) => null,
-      put: async (k, v) => undefined,
+      get: async (_k) => null,
+      put: async (_k, _v) => undefined,
     },
     _state: { dbState, memorialKv, rateLimits },
     ...overrides,
