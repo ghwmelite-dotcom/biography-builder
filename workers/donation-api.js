@@ -254,7 +254,9 @@ export default {
           }
 
           // Invalidate wall totals cache so the donation appears immediately on next fetch
-          try { await env.MEMORIAL_PAGES_KV.delete(`wall:totals:${donation.memorial_id}`) } catch {}
+          try { await env.MEMORIAL_PAGES_KV.delete(`wall:totals:${donation.memorial_id}`) } catch (err) {
+            console.error('donation-api wall:totals KV invalidate (charge.success):', err)
+          }
 
           // Receipt + thank-you email — wired in Task 26
           ctx.waitUntil(queueDonationReceipt(env, donation.id))
@@ -291,9 +293,13 @@ export default {
                   total_donor_count: Math.max(0, (memData.donation?.total_donor_count || 0) - 1),
                 }
                 await env.MEMORIAL_PAGES_KV.put(donation.memorial_id, JSON.stringify(memData))
-              } catch {}
+              } catch (err) {
+                console.error('donation-api memorial KV write-through (refund.processed):', err)
+              }
             }
-            try { await env.MEMORIAL_PAGES_KV.delete(`wall:totals:${donation.memorial_id}`) } catch {}
+            try { await env.MEMORIAL_PAGES_KV.delete(`wall:totals:${donation.memorial_id}`) } catch (err) {
+              console.error('donation-api wall:totals KV invalidate (refund.processed):', err)
+            }
           }
 
           await env.DB.prepare(
@@ -316,7 +322,9 @@ export default {
               JSON.stringify({ donation_id: donation.id, memorial_id: donation.memorial_id, amount_pesewas: donation.amount_pesewas }),
               Date.now()
             ).run()
-          } catch {}
+          } catch (err) {
+            console.error('donation-api admin_notifications insert (donation.refunded):', err)
+          }
 
         } else if (event.event === 'charge.dispute.create') {
           const ref = event.data?.transaction?.reference || event.data?.reference
@@ -328,7 +336,9 @@ export default {
             await env.DB.prepare(
               `INSERT INTO admin_notifications (type, title, detail, created_at) VALUES (?, ?, ?, ?)`
             ).bind('donation.disputed', 'Donation dispute opened', JSON.stringify({ reference: ref }), Date.now()).run()
-          } catch {}
+          } catch (err) {
+            console.error('donation-api admin_notifications insert (donation.disputed):', err)
+          }
         }
 
         return new Response('ok', { status: 200 })
@@ -1167,7 +1177,9 @@ export async function reconcileDay(env) {
          WHERE id = ?`
       ).bind(row.amount_pesewas, Date.now(), Date.now(), row.memorial_id).run()
 
-      try { await env.MEMORIAL_PAGES_KV.delete(`wall:totals:${row.memorial_id}`) } catch {}
+      try { await env.MEMORIAL_PAGES_KV.delete(`wall:totals:${row.memorial_id}`) } catch (err) {
+        console.error('donation-api wall:totals KV invalidate (reconciliation):', err)
+      }
       mismatches++
     }
   }
@@ -1182,7 +1194,9 @@ export async function reconcileDay(env) {
         JSON.stringify({ from, to, count: mismatches }),
         Date.now()
       ).run()
-    } catch {}
+    } catch (err) {
+      console.error('donation-api admin_notifications insert (reconciliation.mismatches):', err)
+    }
   }
 }
 
