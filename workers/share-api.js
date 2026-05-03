@@ -155,6 +155,22 @@ const handler = {
     }
 
     const url = new URL(request.url)
+
+    // Health check (no auth, no rate limit)
+    if (url.pathname === '/health' && request.method === 'GET') {
+      return new Response(
+        JSON.stringify({
+          status: 'ok',
+          service: 'share-api',
+          timestamp: new Date().toISOString(),
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ...makeCorsHeaders(request) },
+        }
+      )
+    }
+
     const path = url.pathname.replace(/^\//, '')
 
     if (request.method === "POST" && (!path || path === '')) {

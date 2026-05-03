@@ -212,6 +212,27 @@ async function handlePost(request, env) {
 const handler = {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return handleOptions(request, env)
+
+    const url = new URL(request.url)
+
+    // Health check (no auth, no rate limit)
+    if (url.pathname === '/health' && request.method === 'GET') {
+      return new Response(
+        JSON.stringify({
+          status: 'ok',
+          service: 'ai-writer',
+          timestamp: new Date().toISOString(),
+        }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeadersFor(request.headers.get('Origin'), env),
+          },
+        }
+      )
+    }
+
     if (request.method === "POST") return handlePost(request, env)
     const corsHeaders = corsHeadersFor(request.headers.get('Origin'), env)
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
