@@ -13,6 +13,8 @@
  * 6. Set secret: RESEND_API_KEY (for admin email notifications)
  */
 
+import * as Sentry from '@sentry/cloudflare'
+
 const PROD_ORIGINS = [
   'https://funeral-brochure-app.pages.dev',
   'https://funeralpress.org',
@@ -167,7 +169,7 @@ async function handleGet(id, env, request) {
   }
 }
 
-export default {
+const handler = {
   async fetch(request, env) {
     // Stash env on request so CORS helpers can gate localhost behind ENVIRONMENT=dev
     request.__env = env
@@ -192,3 +194,12 @@ export default {
     })
   }
 }
+
+export default Sentry.withSentry(
+  (env) => ({
+    dsn: env.SENTRY_DSN,
+    environment: env.ENVIRONMENT || 'production',
+    tracesSampleRate: 0.1,
+  }),
+  handler
+)

@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/cloudflare'
 import { checkRateLimit, getRouteGroup } from './utils/rateLimiter.js'
 import { sanitizeInput } from './utils/sanitize.js'
 import { withSecurityHeaders } from './utils/securityHeaders.js'
@@ -1943,7 +1944,7 @@ async function handleAdminUpdateVenue(request, env, venueId) {
 
 // ─── Router ─────────────────────────────────────────────────────────────────
 
-export default {
+const handler = {
   async fetch(request, env) {
     // Stash env on request so CORS helpers can gate localhost behind ENVIRONMENT=dev
     request.__env = env
@@ -2428,3 +2429,12 @@ export default {
     }
   },
 }
+
+export default Sentry.withSentry(
+  (env) => ({
+    dsn: env.SENTRY_DSN,
+    environment: env.ENVIRONMENT || 'production',
+    tracesSampleRate: 0.1,
+  }),
+  handler
+)

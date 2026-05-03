@@ -5,6 +5,8 @@
  * Uses Cloudflare Workers AI (no API key needed)
  */
 
+import * as Sentry from '@sentry/cloudflare'
+
 const ALLOWED_ORIGINS = [
   'https://funeralpress.org',
   'https://www.funeralpress.org',
@@ -207,7 +209,7 @@ async function handlePost(request, env) {
   }
 }
 
-export default {
+const handler = {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return handleOptions(request, env)
     if (request.method === "POST") return handlePost(request, env)
@@ -218,3 +220,12 @@ export default {
     })
   }
 }
+
+export default Sentry.withSentry(
+  (env) => ({
+    dsn: env.SENTRY_DSN,
+    environment: env.ENVIRONMENT || 'production',
+    tracesSampleRate: 0.1,
+  }),
+  handler
+)

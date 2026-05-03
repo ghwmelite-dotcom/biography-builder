@@ -5,6 +5,7 @@
 //          TERMII_API_KEY, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER,
 //          RESEND_API_KEY, OXR_APP_ID
 
+import * as Sentry from '@sentry/cloudflare'
 import { withSecurityHeaders } from './utils/securityHeaders.js'
 import { sanitizeInput } from './utils/sanitize.js'
 import { logDonationAudit, getClientIP } from './utils/auditLog.js'
@@ -138,7 +139,7 @@ async function verifyApprovalRequest(env, request, memorialId, token, otpCode, p
   return { ok: true, memRow, user }
 }
 
-export default {
+const handler = {
   async fetch(request, env, ctx) {
     // Stash env on request so CORS helpers can gate localhost behind ENVIRONMENT=dev
     request.__env = env
@@ -1121,6 +1122,15 @@ export default {
     ctx.waitUntil(activatePendingMomoChanges(env))
   },
 }
+
+export default Sentry.withSentry(
+  (env) => ({
+    dsn: env.SENTRY_DSN,
+    environment: env.ENVIRONMENT || 'production',
+    tracesSampleRate: 0.1,
+  }),
+  handler
+)
 
 // Daily safety net — pulls Paystack transactions for the last 24h and
 // reconciles against our donations table to catch dropped webhooks.

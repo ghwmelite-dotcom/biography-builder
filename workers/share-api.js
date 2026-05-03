@@ -12,6 +12,8 @@
  * 4. Deploy this code
  */
 
+import * as Sentry from '@sentry/cloudflare'
+
 const PROD_ORIGINS = [
   'https://funeral-brochure-app.pages.dev',
   'https://funeralpress.org',
@@ -144,7 +146,7 @@ async function handlePut(code, request, env) {
   }
 }
 
-export default {
+const handler = {
   async fetch(request, env) {
     // Stash env on request so CORS helpers can gate localhost behind ENVIRONMENT=dev
     request.__env = env
@@ -173,3 +175,12 @@ export default {
     })
   }
 }
+
+export default Sentry.withSentry(
+  (env) => ({
+    dsn: env.SENTRY_DSN,
+    environment: env.ENVIRONMENT || 'production',
+    tracesSampleRate: 0.1,
+  }),
+  handler
+)

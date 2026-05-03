@@ -1,6 +1,7 @@
 name = "brochure-memorial-api"
 main = "memorial-page-api.js"
 compatibility_date = "2026-04-01"
+compatibility_flags = ["nodejs_compat"]
 
 [observability]
 enabled = true
