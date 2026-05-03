@@ -10,7 +10,7 @@ export function SignInChooser() {
         <GoogleLoginButton />
         <button
           onClick={() => setPhoneOpen(true)}
-          className="w-full border border-border text-foreground font-medium py-3 rounded-lg hover:bg-muted"
+          className="w-full border border-input bg-card text-foreground font-medium py-3 rounded-lg hover:bg-muted transition-colors"
         >
           Continue with phone
         </button>
