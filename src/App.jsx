@@ -66,6 +66,7 @@ const ProgrammeBookletPage = lazy(() => import('./pages/landing/ProgrammeBooklet
 const DonatePage = lazy(() => import('./pages/DonatePage.jsx'))
 const DonationThanksPage = lazy(() => import('./pages/DonationThanksPage.jsx'))
 const FamilyHeadApprovalPage = lazy(() => import('./pages/FamilyHeadApprovalPage.jsx'))
+const FamilyHeadDashboardPage = lazy(() => import('./pages/FamilyHeadDashboardPage.jsx'))
 const DonationPrivacyPage = lazy(() => import('./pages/DonationPrivacyPage.jsx'))
 
 function LoadingFallback() {
@@ -177,6 +178,7 @@ export default function App() {
               <Route path="/m/:slug/donate" element={<DonatePage />} />
               <Route path="/m/:slug/donation-thanks" element={<DonationThanksPage />} />
               <Route path="/approve/:token" element={<FamilyHeadApprovalPage />} />
+              <Route path="/family-head/:memorialId" element={<FamilyHeadDashboardPage />} />
               <Route path="/privacy/donations" element={<DonationPrivacyPage />} />
             </Routes>
             </PageTransition>
