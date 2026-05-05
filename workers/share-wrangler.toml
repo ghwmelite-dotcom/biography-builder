@@ -13,6 +13,10 @@ ENVIRONMENT = "production"
 binding = "BROCHURES_KV"
 id = "25fef518037b4423a7176a0b4a533734"
 
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "3cf6b47818c04ca8828461650478a6c1"
+
 [[routes]]
 pattern = "share-api.funeralpress.org/*"
 zone_name = "funeralpress.org"

@@ -265,7 +265,7 @@ const handler = {
 
   // Cron Trigger handler (every 12 hours)
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(processTweetQueue(env))
+    ctx.waitUntil(processTweetQueue(env).catch((e) => Sentry.captureException(e)))
   },
 }
 

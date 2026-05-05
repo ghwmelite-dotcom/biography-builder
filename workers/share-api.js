@@ -13,6 +13,7 @@
  */
 
 import * as Sentry from '@sentry/cloudflare'
+import { checkRateLimit } from './utils/rateLimiter.js'
 
 const PROD_ORIGINS = [
   'https://funeral-brochure-app.pages.dev',
@@ -172,6 +173,23 @@ const handler = {
     }
 
     const path = url.pathname.replace(/^\//, '')
+
+    if (env.RATE_LIMITS) {
+      const isWrite = request.method === 'POST' || request.method === 'PUT'
+      const limited = await checkRateLimit(
+        request,
+        env.RATE_LIMITS,
+        isWrite ? 'share:write' : 'share:read',
+        isWrite ? 10 : 120
+      )
+      if (limited) {
+        const body = await limited.text()
+        return new Response(body, {
+          status: 429,
+          headers: { 'Content-Type': 'application/json', 'Retry-After': '60', ...makeCorsHeaders(request) },
+        })
+      }
+    }
 
     if (request.method === "POST" && (!path || path === '')) {
       return handlePost(request, env)

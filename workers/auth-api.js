@@ -1845,8 +1845,10 @@ async function handleSubscriptionCancel(request, env, userId) {
     })
   }
 
+  // Zero credits immediately so a cancelling user can't keep spending entitlement
+  // in the window before Paystack's subscription.disable webhook fires.
   await env.DB.prepare(
-    "UPDATE subscriptions SET cancel_at_period_end = 1, cancelled_at = datetime('now'), updated_at = datetime('now') WHERE id = ?"
+    "UPDATE subscriptions SET cancel_at_period_end = 1, monthly_credits_remaining = 0, cancelled_at = datetime('now'), updated_at = datetime('now') WHERE id = ?"
   ).bind(sub.id).run()
 
   await env.DB.prepare(
@@ -1862,6 +1864,22 @@ async function handleSubscriptionCancel(request, env, userId) {
   })
 
   return json({ ok: true, cancelAtPeriodEnd: true }, 200, request)
+}
+
+/**
+ * Map a Paystack plan_code to our internal plan label.
+ * `recognized: false` means the caller should alert (Sentry + audit) — we still
+ * default to pro_monthly so we never lose the subscription, but a misconfigured
+ * env var or a Paystack-side plan rename should never silently miscategorize.
+ */
+export function mapPaystackPlanCode(planCode, env) {
+  if (planCode && env?.PAYSTACK_PLAN_ANNUAL && planCode === env.PAYSTACK_PLAN_ANNUAL) {
+    return { plan: 'pro_annual', recognized: true }
+  }
+  if (planCode && env?.PAYSTACK_PLAN_MONTHLY && planCode === env.PAYSTACK_PLAN_MONTHLY) {
+    return { plan: 'pro_monthly', recognized: true }
+  }
+  return { plan: 'pro_monthly', recognized: false }
 }
 
 async function handleSubscriptionWebhook(request, env) {
@@ -1896,7 +1914,30 @@ async function handleSubscriptionWebhook(request, env) {
     if (!userId) return json({ ok: true }, 200, request)
 
     const id = generateId()
-    const plan = data.plan?.plan_code === env.PAYSTACK_PLAN_ANNUAL ? 'pro_annual' : 'pro_monthly'
+    const receivedPlanCode = data.plan?.plan_code
+    const { plan, recognized } = mapPaystackPlanCode(receivedPlanCode, env)
+    if (!recognized) {
+      console.error('[subscription.create] unrecognized plan_code; defaulting to pro_monthly', {
+        received: receivedPlanCode,
+      })
+      Sentry.captureMessage('subscription.create with unrecognized plan_code', {
+        level: 'warning',
+        extra: {
+          receivedPlanCode,
+          configMonthly: env.PAYSTACK_PLAN_MONTHLY,
+          configAnnual: env.PAYSTACK_PLAN_ANNUAL,
+          userId,
+          reference: data.reference,
+        },
+      })
+      await logAudit(env.DB, {
+        userId,
+        action: 'subscription.create.unrecognized_plan_code',
+        resourceType: 'subscription',
+        detail: { receivedPlanCode, reference: data.reference },
+        ipAddress: getClientIP(request),
+      })
+    }
     const now = new Date().toISOString()
     const periodEnd = data.next_payment_date || new Date(Date.now() + 30 * 86400000).toISOString()
 
@@ -2619,8 +2660,9 @@ const handler = {
   async scheduled(controller, env, ctx) {
     // Daily 08:00 UTC dunning sweep — walks past_due subscriptions through
     // Day 1 / Day 3 / Day 7-downgrade emails. See workers/utils/dunning.js.
-    ctx.waitUntil(runDunningCron(env).catch(e => {
+    ctx.waitUntil(runDunningCron(env).catch((e) => {
       console.error('[scheduled] runDunningCron failed:', e?.message || e)
+      Sentry.captureException(e)
     }))
   },
 }

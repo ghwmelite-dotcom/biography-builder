@@ -13,6 +13,10 @@ ENVIRONMENT = "production"
 binding = "LIVE_SERVICE_KV"
 id = "cea5d511eba548518c396f5fe05b3701"
 
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "3cf6b47818c04ca8828461650478a6c1"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "funeralpress-db"
