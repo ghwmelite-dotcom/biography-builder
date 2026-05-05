@@ -43,3 +43,6 @@ id = "a1ac0eaccf854a688954d90859570738"
 [[routes]]
 pattern = "auth-api.funeralpress.org/*"
 zone_name = "funeralpress.org"
+
+[triggers]
+crons = ["0 8 * * *"]    # Daily dunning sweep at 08:00 UTC

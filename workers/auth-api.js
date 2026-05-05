@@ -9,6 +9,7 @@ import { selectProvider } from './utils/phoneRouter.js'
 import { sendTermiiOtp } from './utils/termii.js'
 import { sendTwilioOtp } from './utils/twilioVerify.js'
 import { featureFlag } from './utils/featureFlag.js'
+import { runDunningCron } from './utils/dunning.js'
 
 // FuneralPress Auth API Worker
 // Bindings: DB (D1), IMAGES (R2), JWT_SECRET (secret), GOOGLE_CLIENT_ID (var)
@@ -1901,6 +1902,32 @@ async function handleSubscriptionWebhook(request, env) {
     return json({ ok: true }, 200, request)
   }
 
+  if (event.event === 'charge.failed') {
+    // Mark subscription past_due and reset dunning stage to 0 so the
+    // daily dunning cron starts the Day 1 / Day 3 / Day 7 sequence.
+    const subCode = data.subscription_code || data.plan?.subscription_code
+    if (!subCode) return json({ ok: true }, 200, request)
+
+    const sub = await env.DB.prepare(
+      'SELECT id FROM subscriptions WHERE paystack_subscription_code = ?'
+    ).bind(subCode).first()
+
+    if (sub) {
+      await env.DB.prepare(
+        "UPDATE subscriptions SET status = 'past_due', dunning_stage = 0, last_dunning_sent_at = NULL, updated_at = datetime('now') WHERE id = ?"
+      ).bind(sub.id).run()
+
+      await env.DB.prepare(
+        "INSERT INTO subscription_events (subscription_id, event_type, detail) VALUES (?, 'charge.failed', ?)"
+      ).bind(sub.id, JSON.stringify({
+        reference: data.reference,
+        gateway_response: data.gateway_response,
+      })).run()
+    }
+
+    return json({ ok: true }, 200, request)
+  }
+
   return json({ ok: true }, 200, request)
 }
 
@@ -2541,6 +2568,14 @@ const handler = {
       // Always return CORS headers even on unexpected errors
       return json({ error: err.message || 'Internal server error' }, 500, request)
     }
+  },
+
+  async scheduled(controller, env, ctx) {
+    // Daily 08:00 UTC dunning sweep — walks past_due subscriptions through
+    // Day 1 / Day 3 / Day 7-downgrade emails. See workers/utils/dunning.js.
+    ctx.waitUntil(runDunningCron(env).catch(e => {
+      console.error('[scheduled] runDunningCron failed:', e?.message || e)
+    }))
   },
 }
 
