@@ -14,7 +14,10 @@
 // ============================================================
 
 const RESEND_FROM = 'FuneralPress <notifications@funeralpress.org>'
-const PORTAL_URL = 'https://funeralpress.org/account'
+// Used when no Paystack manage link can be fetched. Points at a generic page
+// so the email is never broken; per-user manage links replace this in
+// runDunningCron via fetchPaystackManageLink().
+const FALLBACK_PORTAL_URL = 'https://funeralpress.org'
 // Min ms between Day 1 → Day 3 (2 days) and Day 3 → downgrade (4 days)
 const DAY_MS = 86400000
 const DAY3_DELAY_MS = 2 * DAY_MS
@@ -29,32 +32,56 @@ function recipientName(user) {
   return user.name || user.email?.split('@')[0] || 'there'
 }
 
+/**
+ * Fetch a per-subscription Paystack-hosted "manage subscription" link so the
+ * dunning email lets the user update their card without leaving the email.
+ * Returns the fallback URL if Paystack rejects, the env is misconfigured, or
+ * the subscription code is missing — the email must always have a usable link.
+ */
+export async function fetchPaystackManageLink(env, subscriptionCode) {
+  if (!subscriptionCode || !env?.PAYSTACK_SECRET_KEY) return FALLBACK_PORTAL_URL
+  try {
+    const res = await fetch(
+      `https://api.paystack.co/subscription/${encodeURIComponent(subscriptionCode)}/manage/link`,
+      { headers: { Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}` } }
+    )
+    if (!res.ok) return FALLBACK_PORTAL_URL
+    const data = await res.json().catch(() => null)
+    return data?.data?.link || FALLBACK_PORTAL_URL
+  } catch (e) {
+    console.error('[dunning] Paystack manage-link fetch failed:', e?.message || e)
+    return FALLBACK_PORTAL_URL
+  }
+}
+
 // ─── Email templates ────────────────────────────────────────────────────────
 
-export function dunningDay1Email(user, sub) {
+export function dunningDay1Email(user, sub, manageUrl = FALLBACK_PORTAL_URL) {
   const name = recipientName(user)
   const plan = planLabel(sub?.plan)
+  const url = manageUrl || FALLBACK_PORTAL_URL
   const subject = 'Your FuneralPress Pro payment failed'
   const text = `Hi ${name},
 
 We couldn't process your Pro ${plan} subscription payment. We'll retry automatically over the next few days.
 
-Update your payment method here: ${PORTAL_URL}
+Update your payment method here: ${url}
 
 Your Pro features remain active for now.
 
 — The FuneralPress team`
   const html = `<p>Hi ${name},</p>
 <p>We couldn't process your Pro ${plan} subscription payment. We'll retry automatically over the next few days.</p>
-<p>Update your payment method here: <a href="${PORTAL_URL}">${PORTAL_URL}</a></p>
+<p>Update your payment method here: <a href="${url}">${url}</a></p>
 <p>Your Pro features remain active for now.</p>
 <p>— The FuneralPress team</p>`
   return { subject, text, html }
 }
 
-export function dunningDay3Email(user, sub) {
+export function dunningDay3Email(user, sub, manageUrl = FALLBACK_PORTAL_URL) {
   const name = recipientName(user)
   const plan = planLabel(sub?.plan)
+  const url = manageUrl || FALLBACK_PORTAL_URL
   const subject = 'Action needed: your FuneralPress Pro access ends in 4 days'
   const text = `Hi ${name},
 
@@ -62,20 +89,21 @@ Your Pro ${plan} subscription is past due. We'll downgrade your account in 4 day
 
 Your designs and memorials will be preserved.
 
-Update payment: ${PORTAL_URL}
+Update payment: ${url}
 
 — The FuneralPress team`
   const html = `<p>Hi ${name},</p>
 <p>Your Pro ${plan} subscription is past due. We'll downgrade your account in 4 days unless payment goes through.</p>
 <p>Your designs and memorials will be preserved.</p>
-<p>Update payment: <a href="${PORTAL_URL}">${PORTAL_URL}</a></p>
+<p>Update payment: <a href="${url}">${url}</a></p>
 <p>— The FuneralPress team</p>`
   return { subject, text, html }
 }
 
-export function dunningDowngradeEmail(user, sub) {
+export function dunningDowngradeEmail(user, sub, manageUrl = FALLBACK_PORTAL_URL) {
   const name = recipientName(user)
   const plan = planLabel(sub?.plan)
+  const url = manageUrl || FALLBACK_PORTAL_URL
   const subject = 'Your FuneralPress Pro access has been downgraded'
   const text = `Hi ${name},
 
@@ -83,13 +111,13 @@ Your Pro ${plan} subscription has been downgraded to the free tier after multipl
 
 All your designs and memorials are preserved.
 
-Resubscribe anytime: ${PORTAL_URL}
+Resubscribe anytime: ${url}
 
 — The FuneralPress team`
   const html = `<p>Hi ${name},</p>
 <p>Your Pro ${plan} subscription has been downgraded to the free tier after multiple failed payment attempts.</p>
 <p>All your designs and memorials are preserved.</p>
-<p>Resubscribe anytime: <a href="${PORTAL_URL}">${PORTAL_URL}</a></p>
+<p>Resubscribe anytime: <a href="${url}">${url}</a></p>
 <p>— The FuneralPress team</p>`
   return { subject, text, html }
 }
@@ -145,6 +173,7 @@ export async function runDunningCron(env) {
   // Pull every past_due subscription that has not yet hit terminal stage 3.
   const { results = [] } = await env.DB.prepare(
     `SELECT s.id, s.user_id, s.plan, s.status, s.dunning_stage, s.last_dunning_sent_at,
+            s.paystack_subscription_code,
             u.email AS user_email, u.name AS user_name
        FROM subscriptions s
        LEFT JOIN users u ON u.id = s.user_id
@@ -170,8 +199,12 @@ export async function runDunningCron(env) {
     const lastSentMs = row.last_dunning_sent_at ? Date.parse(row.last_dunning_sent_at) : 0
 
     if (stage === 0) {
-      // Just entered past_due → Day 1 email
-      const tpl = dunningDay1Email(user, sub)
+      // Just entered past_due → Day 1 email.
+      // Fetch a per-user Paystack manage-subscription URL so the email lets
+      // the customer update their card. Falls back to the homepage if
+      // Paystack is unavailable — see fetchPaystackManageLink().
+      const manageUrl = await fetchPaystackManageLink(env, row.paystack_subscription_code)
+      const tpl = dunningDay1Email(user, sub, manageUrl)
       await sendResendEmail(env, row.user_email, tpl)
       await env.DB.prepare(
         `UPDATE subscriptions
@@ -187,7 +220,8 @@ export async function runDunningCron(env) {
     } else if (stage === 1) {
       // Already sent Day 1 → require ≥ 2 days before Day 3
       if (now - lastSentMs < DAY3_DELAY_MS) continue
-      const tpl = dunningDay3Email(user, sub)
+      const manageUrl = await fetchPaystackManageLink(env, row.paystack_subscription_code)
+      const tpl = dunningDay3Email(user, sub, manageUrl)
       await sendResendEmail(env, row.user_email, tpl)
       await env.DB.prepare(
         `UPDATE subscriptions
@@ -203,7 +237,8 @@ export async function runDunningCron(env) {
     } else if (stage === 2) {
       // Already sent Day 3 → require ≥ 4 more days before downgrade
       if (now - lastSentMs < DOWNGRADE_DELAY_MS) continue
-      const tpl = dunningDowngradeEmail(user, sub)
+      const manageUrl = await fetchPaystackManageLink(env, row.paystack_subscription_code)
+      const tpl = dunningDowngradeEmail(user, sub, manageUrl)
       await sendResendEmail(env, row.user_email, tpl)
       await env.DB.prepare(
         `UPDATE subscriptions
