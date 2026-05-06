@@ -40,7 +40,7 @@ function handleOptions(request, env) {
   return new Response(null, { status: 204, headers: corsHeadersFor(origin, env) })
 }
 
-function buildPrompt(type, data) {
+export function buildPrompt(type, data) {
   const { relationship, memories, tone, name, deceasedName } = data
 
   if (type === 'tribute') {
