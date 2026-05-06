@@ -273,8 +273,12 @@ const handler = {
             console.error('donation-api wall:totals KV invalidate (charge.success):', err)
           }
 
-          // Receipt + thank-you email — wired in Task 26
-          ctx.waitUntil(queueDonationReceipt(env, donation.id))
+          // Receipt + thank-you email — wired in Task 26.
+          // .catch() so a failed receipt send surfaces in Sentry instead of being
+          // silently dropped by the runtime (Sentry.withSentry only wraps fetch).
+          ctx.waitUntil(
+            queueDonationReceipt(env, donation.id).catch((e) => Sentry.captureException(e))
+          )
         } else if (event.event === 'charge.failed') {
           await env.DB.prepare(
             `UPDATE donations SET status = 'failed', failure_reason = ? WHERE paystack_reference = ? AND status = 'pending'`
@@ -1340,8 +1344,8 @@ const handler = {
 
   async scheduled(event, env, ctx) {
     if (!featureFlag(env, 'RECONCILIATION_ENABLED')) return
-    ctx.waitUntil(reconcileDay(env))
-    ctx.waitUntil(activatePendingMomoChanges(env))
+    ctx.waitUntil(reconcileDay(env).catch((e) => Sentry.captureException(e)))
+    ctx.waitUntil(activatePendingMomoChanges(env).catch((e) => Sentry.captureException(e)))
   },
 }
 

@@ -4,6 +4,7 @@ import {
   dunningDay1Email,
   dunningDay3Email,
   dunningDowngradeEmail,
+  fetchPaystackManageLink,
 } from '../utils/dunning.js'
 
 const DAY_MS = 86400000
@@ -60,6 +61,7 @@ function makeMockDb({ subs = [] }) {
                   status: s.status,
                   dunning_stage: s.dunning_stage || 0,
                   last_dunning_sent_at: s.last_dunning_sent_at || null,
+                  paystack_subscription_code: s.paystack_subscription_code || null,
                   user_email: s.user_email,
                   user_name: s.user_name,
                 })),
@@ -83,34 +85,85 @@ function isoDaysAgo(days) {
   return new Date(Date.now() - days * DAY_MS).toISOString()
 }
 
+// ─── fetchPaystackManageLink ────────────────────────────────────────────────
+
+describe('fetchPaystackManageLink', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn()
+  })
+
+  it('returns fallback when subscriptionCode is missing', async () => {
+    const url = await fetchPaystackManageLink({ PAYSTACK_SECRET_KEY: 'k' }, null)
+    expect(url).toBe('https://funeralpress.org')
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it('returns fallback when PAYSTACK_SECRET_KEY is missing', async () => {
+    const url = await fetchPaystackManageLink({}, 'SUB_x')
+    expect(url).toBe('https://funeralpress.org')
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it('returns the link from Paystack on a successful 2xx response', async () => {
+    global.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { link: 'https://paystack.com/manage/sub/xyz' } }),
+    })
+    const url = await fetchPaystackManageLink({ PAYSTACK_SECRET_KEY: 'k' }, 'SUB_xyz')
+    expect(url).toBe('https://paystack.com/manage/sub/xyz')
+  })
+
+  it('falls back when Paystack returns non-2xx', async () => {
+    global.fetch.mockResolvedValue({ ok: false, text: async () => 'fail' })
+    const url = await fetchPaystackManageLink({ PAYSTACK_SECRET_KEY: 'k' }, 'SUB_x')
+    expect(url).toBe('https://funeralpress.org')
+  })
+
+  it('falls back when fetch throws', async () => {
+    global.fetch.mockRejectedValue(new Error('network down'))
+    const url = await fetchPaystackManageLink({ PAYSTACK_SECRET_KEY: 'k' }, 'SUB_x')
+    expect(url).toBe('https://funeralpress.org')
+  })
+})
+
 // ─── Email helper template tests ────────────────────────────────────────────
 
 describe('dunning email templates', () => {
   const user = { name: 'Akua Mensah', email: 'akua@example.com' }
   const subMonthly = { id: 's1', plan: 'pro_monthly' }
   const subAnnual = { id: 's2', plan: 'pro_annual' }
+  const MANAGE_URL = 'https://paystack.com/manage/sub/abc123'
 
-  it('Day 1 returns subject + html + text', () => {
-    const out = dunningDay1Email(user, subMonthly)
+  it('Day 1 returns subject + html + text with manage URL embedded', () => {
+    const out = dunningDay1Email(user, subMonthly, MANAGE_URL)
     expect(out.subject).toBe('Your FuneralPress Pro payment failed')
     expect(out.text).toContain('Akua Mensah')
     expect(out.text).toContain('monthly')
-    expect(out.html).toContain('funeralpress.org/account')
-    expect(out.text).toContain('funeralpress.org/account')
+    expect(out.html).toContain(MANAGE_URL)
+    expect(out.text).toContain(MANAGE_URL)
   })
 
-  it('Day 3 mentions 4 days warning + annual plan', () => {
-    const out = dunningDay3Email(user, subAnnual)
+  it('Day 1 falls back to homepage URL when no manage URL provided', () => {
+    const out = dunningDay1Email(user, subMonthly)
+    expect(out.text).toContain('https://funeralpress.org')
+    // Must NOT leak the old placeholder /account path
+    expect(out.text).not.toContain('funeralpress.org/account')
+  })
+
+  it('Day 3 mentions 4 days warning + annual plan + manage URL', () => {
+    const out = dunningDay3Email(user, subAnnual, MANAGE_URL)
     expect(out.subject).toContain('4 days')
     expect(out.text).toContain('annual')
     expect(out.text).toContain('preserved')
+    expect(out.text).toContain(MANAGE_URL)
   })
 
-  it('Downgrade email confirms preservation', () => {
-    const out = dunningDowngradeEmail(user, subMonthly)
+  it('Downgrade email confirms preservation + uses manage URL', () => {
+    const out = dunningDowngradeEmail(user, subMonthly, MANAGE_URL)
     expect(out.subject).toContain('downgraded')
     expect(out.text).toContain('preserved')
     expect(out.text).toContain('Resubscribe')
+    expect(out.text).toContain(MANAGE_URL)
   })
 
   it('falls back to "there" when user has no name/email', () => {
@@ -128,8 +181,25 @@ describe('dunning email templates', () => {
 
 describe('runDunningCron', () => {
   beforeEach(() => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, text: async () => 'ok' })
+    // The cron now hits two upstreams: Paystack (manage link) and Resend (send).
+    // Discriminate by URL so each test sees a stable call sequence.
+    global.fetch = vi.fn(async (url) => {
+      const u = String(url || '')
+      if (u.includes('api.paystack.co/subscription/')) {
+        return {
+          ok: true,
+          text: async () => '',
+          json: async () => ({ data: { link: 'https://paystack.com/manage/sub/test' } }),
+        }
+      }
+      // Default: Resend
+      return { ok: true, text: async () => 'ok', json: async () => ({}) }
+    })
   })
+
+  function resendCalls() {
+    return global.fetch.mock.calls.filter(([url]) => String(url).includes('resend.com'))
+  }
 
   it('sends Day 1 email when status=past_due and dunning_stage=0', async () => {
     const env = makeEnv({
@@ -148,10 +218,10 @@ describe('runDunningCron', () => {
     expect(out.day1).toBe(1)
     expect(out.day3).toBe(0)
     expect(out.downgraded).toBe(0)
-    // One Resend POST
-    expect(global.fetch).toHaveBeenCalledTimes(1)
-    const callUrl = global.fetch.mock.calls[0][0]
-    expect(callUrl).toBe('https://api.resend.com/emails')
+    // Exactly one Resend POST (Paystack manage-link fetch is separate)
+    const resends = resendCalls()
+    expect(resends).toHaveLength(1)
+    expect(resends[0][0]).toBe('https://api.resend.com/emails')
     // Subscription advanced to stage 1
     expect(env.DB._state.subs[0].dunning_stage).toBe(1)
     expect(env.DB._state.subs[0].last_dunning_sent_at).toBeTruthy()
@@ -296,6 +366,60 @@ describe('runDunningCron', () => {
     const out = await runDunningCron({})
     expect(out.processed).toBe(0)
     expect(out.day1).toBe(0)
+  })
+
+  it('fetches per-user Paystack manage URL and includes it in the dunning email', async () => {
+    const env = makeEnv({
+      subs: [{
+        id: 'sub-pm',
+        user_id: 'upm',
+        plan: 'pro_monthly',
+        status: 'past_due',
+        dunning_stage: 0,
+        last_dunning_sent_at: null,
+        user_email: 'upm@example.com',
+        user_name: 'PM',
+        paystack_subscription_code: 'SUB_xyz',
+      }],
+    })
+    env.PAYSTACK_SECRET_KEY = 'sk_test_fake'
+    const out = await runDunningCron(env)
+    expect(out.day1).toBe(1)
+    // Paystack manage-link fetch should have happened with the sub code
+    const paystackCalls = global.fetch.mock.calls.filter(([url]) =>
+      String(url).includes('api.paystack.co/subscription/SUB_xyz/manage/link')
+    )
+    expect(paystackCalls).toHaveLength(1)
+    // Resend body should embed the link returned by the Paystack mock
+    const resendCall = resendCalls()[0]
+    const sentBody = JSON.parse(resendCall[1].body)
+    expect(sentBody.html).toContain('https://paystack.com/manage/sub/test')
+  })
+
+  it('falls back to homepage URL in email when Paystack manage-link fails', async () => {
+    // Override the global mock for THIS test so Paystack returns 500
+    const fetchMock = vi.fn(async (url) => {
+      const u = String(url || '')
+      if (u.includes('api.paystack.co')) return { ok: false, text: async () => 'down' }
+      return { ok: true, text: async () => 'ok', json: async () => ({}) }
+    })
+    global.fetch = fetchMock
+    const env = makeEnv({
+      subs: [{
+        id: 'sub-fb', user_id: 'ufb', plan: 'pro_monthly', status: 'past_due',
+        dunning_stage: 0, last_dunning_sent_at: null,
+        user_email: 'ufb@example.com', user_name: 'FB',
+        paystack_subscription_code: 'SUB_fail',
+      }],
+    })
+    env.PAYSTACK_SECRET_KEY = 'sk_test_fake'
+    const out = await runDunningCron(env)
+    expect(out.day1).toBe(1)
+    const resendBody = JSON.parse(
+      fetchMock.mock.calls.find(([u]) => String(u).includes('resend.com'))[1].body
+    )
+    expect(resendBody.html).toContain('https://funeralpress.org')
+    expect(resendBody.html).not.toContain('funeralpress.org/account')
   })
 
   it('still updates DB state when RESEND_API_KEY is missing (logs warning)', async () => {

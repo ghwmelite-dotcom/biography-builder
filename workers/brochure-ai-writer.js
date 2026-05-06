@@ -6,6 +6,7 @@
  */
 
 import * as Sentry from '@sentry/cloudflare'
+import { checkRateLimit } from './utils/rateLimiter.js'
 
 const ALLOWED_ORIGINS = [
   'https://funeralpress.org',
@@ -39,7 +40,7 @@ function handleOptions(request, env) {
   return new Response(null, { status: 204, headers: corsHeadersFor(origin, env) })
 }
 
-function buildPrompt(type, data) {
+export function buildPrompt(type, data) {
   const { relationship, memories, tone, name, deceasedName } = data
 
   if (type === 'tribute') {
@@ -233,8 +234,21 @@ const handler = {
       )
     }
 
-    if (request.method === "POST") return handlePost(request, env)
     const corsHeaders = corsHeadersFor(request.headers.get('Origin'), env)
+
+    if (env.RATE_LIMITS) {
+      // AI generation is expensive — 5 req/min/IP cap
+      const limited = await checkRateLimit(request, env.RATE_LIMITS, 'ai-writer', 5)
+      if (limited) {
+        const body = await limited.text()
+        return new Response(body, {
+          status: 429,
+          headers: { 'Content-Type': 'application/json', 'Retry-After': '60', ...corsHeaders },
+        })
+      }
+    }
+
+    if (request.method === "POST") return handlePost(request, env)
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
       headers: { "Content-Type": "application/json", ...corsHeaders }

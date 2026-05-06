@@ -2,6 +2,13 @@ import { PDFDownloadLink } from '@react-pdf/renderer'
 import { Download } from 'lucide-react'
 import { usePurchaseStore } from '../../stores/purchaseStore'
 
+// Known threat model: the unlock check below reads from the client-side
+// purchaseStore, and react-pdf renders the PDF entirely in-browser, so a
+// determined user with DevTools can manipulate `unlockedDesigns` to bypass
+// the watermark. This is an accepted limitation for v1 — moving PDF generation
+// server-side behind a signed URL is tracked as a P1 follow-up. Bypass requires
+// real technical effort, and anyone willing to do it is unlikely to ever pay,
+// so the leakage is bounded in practice.
 export default function GatedDownloadButton({ document, fileName, designId, productType }) {
   const canDownload = usePurchaseStore(s => s.canDownload)
   const requestDownload = usePurchaseStore(s => s.requestDownload)
