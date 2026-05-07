@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import worker from '../donation-api.js'
 import { signJWT } from '../utils/jwt.js'
-import { hashOtp } from '../utils/otp.js'
 
 const PEPPER = 'test-pepper'
 const JWT_SECRET = 'test-jwt-secret'
@@ -115,8 +114,13 @@ async function setupApprovalCtx({ phoneOnToken = PHONE, expiredOtp = false, otpP
   const token = await signJWT(tokenPayload, JWT_SECRET)
   const tokenHash = await sha256Hex(token)
 
+  // Pre-PR-3 the approval flow demanded a phone OTP; the otp object below is
+  // dead test fixture kept only because the mock DB still has placeholder
+  // FROM phone_otps lookups that never fire in the new flow. Test code reads
+  // `ctx.code` in a couple of places to construct request bodies; the value
+  // is ignored by the worker.
   const code = '123456'
-  const codeHash = await hashOtp(code, PEPPER)
+  const codeHash = 'unused'
 
   const memorial = {
     id: MEMORIAL_ID,

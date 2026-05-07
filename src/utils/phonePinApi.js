@@ -46,6 +46,7 @@ export const phonePinApi = {
   reset: (payload) => request('/auth/phone/reset', { body: payload }),
   verifyEmail: (payload) => request('/auth/phone/verify-email', { body: payload }),
   changePin: (payload) => request('/auth/phone/change-pin', { body: payload, auth: true }),
+  resendVerification: () => request('/auth/phone/resend-verification', { auth: true }),
 }
 
 export { PhonePinError }

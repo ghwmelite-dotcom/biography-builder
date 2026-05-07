@@ -196,28 +196,6 @@ export const useAuthStore = create((set, get) => ({
     usePurchaseStore.getState().hydrateFromUser(data.user)
   },
 
-  // Link a verified phone to the currently-authenticated account.
-  // Caller has already collected an OTP code via /auth/phone/send-otp + /auth/phone/verify.
-  linkPhone: async (phone, code) => {
-    const { phoneAuthApi } = await import('../utils/donationApi.js')
-    const res = await phoneAuthApi.link(phone, code)
-    set(s => {
-      const updatedUser = {
-        ...(s.user || {}),
-        phone_e164: res.phone_e164,
-        auth_methods: res.auth_methods,
-      }
-      saveAuth({
-        user: updatedUser,
-        accessToken: s.accessToken,
-        refreshToken: s.refreshToken,
-        hasMigrated: s.hasMigrated,
-      })
-      return { user: updatedUser }
-    })
-    return res
-  },
-
   // Mark the welcome tour as completed/dismissed.
   // Persists onboarded_at to the backend so the tour does not re-show
   // across devices/sessions; updates the local user object so any

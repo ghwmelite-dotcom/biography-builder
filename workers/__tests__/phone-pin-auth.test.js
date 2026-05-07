@@ -620,3 +620,74 @@ describe('POST /auth/phone/change-pin', () => {
     expect(res.status).toBe(400)
   })
 })
+
+// ─── /auth/phone/resend-verification (authenticated) ─────────────────────────
+
+describe('POST /auth/phone/resend-verification', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, text: async () => 'ok' })
+  })
+
+  async function unverifiedUser() {
+    const pin_hash = await hashPin(PIN)
+    return {
+      id: 'u1', email: EMAIL, name: NAME, phone_e164: PHONE, pin_hash,
+      email_verified_at: null, deleted_at: null,
+    }
+  }
+
+  it('issues a new email_verify token and sends Resend email', async () => {
+    const env = makeEnv({ users: [await unverifiedUser()] })
+    const jwt = await makeAuthJwt('u1')
+    const res = await worker.fetch(
+      jsonReq('/auth/phone/resend-verification', 'POST', null, {
+        Authorization: `Bearer ${jwt}`,
+      }),
+      env
+    )
+    expect(res.status).toBe(200)
+    const verifyTokens = env.DB._state.emailTokens.filter((t) => t.purpose === 'email_verify')
+    expect(verifyTokens).toHaveLength(1)
+    const resendCalled = global.fetch.mock.calls.some((c) => String(c[0]).includes('resend.com'))
+    expect(resendCalled).toBe(true)
+  })
+
+  it('returns 200 no-op (no email, no token) when email is already verified', async () => {
+    const verifiedUser = { ...(await unverifiedUser()), email_verified_at: Date.now() }
+    const env = makeEnv({ users: [verifiedUser] })
+    const jwt = await makeAuthJwt('u1')
+    const res = await worker.fetch(
+      jsonReq('/auth/phone/resend-verification', 'POST', null, {
+        Authorization: `Bearer ${jwt}`,
+      }),
+      env
+    )
+    expect(res.status).toBe(200)
+    expect(env.DB._state.emailTokens.filter((t) => t.purpose === 'email_verify')).toHaveLength(0)
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it('returns 401 without Bearer auth', async () => {
+    const env = makeEnv({ users: [await unverifiedUser()] })
+    const res = await worker.fetch(
+      jsonReq('/auth/phone/resend-verification', 'POST', null),
+      env
+    )
+    expect(res.status).toBe(401)
+  })
+
+  it('rate-limits at 3 per hour per user', async () => {
+    const env = makeEnv({ users: [await unverifiedUser()] })
+    const jwt = await makeAuthJwt('u1')
+    // Pre-fill the per-user counter to the limit.
+    env._kv.set('rate:1.2.3.4:authenticated', '0')
+    env._kv.set('pp:resend:user:u1', '3')
+    const res = await worker.fetch(
+      jsonReq('/auth/phone/resend-verification', 'POST', null, {
+        Authorization: `Bearer ${jwt}`,
+      }),
+      env
+    )
+    expect(res.status).toBe(429)
+  })
+})

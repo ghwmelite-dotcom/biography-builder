@@ -2,12 +2,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { donationApi } from '../utils/donationApi.js'
 import { DonationThankYouCard } from '../components/donation/DonationThankYouCard.jsx'
-import { PhoneAuthDialog } from '../components/auth/PhoneAuthDialog.jsx'
+import { PhonePinLoginDialog } from '../components/auth/PhonePinLoginDialog.jsx'
 import GoogleLoginButton from '../components/auth/GoogleLoginButton.jsx'
-
-// Same dual-gate as SignInChooser: phone-auth UI hidden until Hubtel SMS
-// credentials are wired AND PHONE_AUTH_ENABLED worker var is true.
-const PHONE_AUTH_ENABLED = import.meta.env.VITE_PHONE_AUTH_ENABLED === 'true'
 
 const DONATION_API = import.meta.env.VITE_DONATION_API_URL || 'https://donation-api.funeralpress.org'
 const DONATION_BY_REF_URL = (ref) => `${DONATION_API}/donations/by-ref/${encodeURIComponent(ref)}`
@@ -40,6 +36,17 @@ export default function DonationThanksPage() {
       cancelled = true
     }
   }, [reference])
+
+  const onLoginSuccess = async () => {
+    setPhoneOpen(false)
+    if (donation) {
+      try {
+        await donationApi.claim(donation.id)
+      } catch (err) {
+        console.error('Donation claim failed:', err)
+      }
+    }
+  }
 
   return (
     <main className="max-w-md mx-auto px-4 py-8 text-center">
@@ -74,14 +81,12 @@ export default function DonationThanksPage() {
       </p>
 
       <div className="space-y-3">
-        {PHONE_AUTH_ENABLED && (
-          <button
-            onClick={() => setPhoneOpen(true)}
-            className="w-full py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Continue with phone
-          </button>
-        )}
+        <button
+          onClick={() => setPhoneOpen(true)}
+          className="w-full py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors"
+        >
+          Continue with phone
+        </button>
         <GoogleLoginButton />
       </div>
 
@@ -91,22 +96,11 @@ export default function DonationThanksPage() {
         </a>
       </p>
 
-      {PHONE_AUTH_ENABLED && (
-        <PhoneAuthDialog
-          open={phoneOpen}
-          onOpenChange={setPhoneOpen}
-          purpose="login"
-          onSuccess={async () => {
-            if (donation) {
-              try {
-                await donationApi.claim(donation.id)
-              } catch (err) {
-                console.error('Donation claim failed:', err)
-              }
-            }
-          }}
-        />
-      )}
+      <PhonePinLoginDialog
+        open={phoneOpen}
+        onOpenChange={setPhoneOpen}
+        onSuccess={onLoginSuccess}
+      />
     </main>
   )
 }
