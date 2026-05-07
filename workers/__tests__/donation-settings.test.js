@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import worker from '../donation-api.js'
 import { signJWT } from '../utils/jwt.js'
-import { hashOtp } from '../utils/otp.js'
 
 const PEPPER = 'test-pepper'
 const JWT_SECRET = 'test-jwt-secret'
@@ -198,77 +197,25 @@ describe('PATCH /memorials/:id/donation/settings', () => {
     expect(res.status).toBe(400)
   })
 
-  it('payout change without OTP returns 401 with otp_required code', async () => {
+  it('payout change attempt now returns 403 (self-service editing not yet supported post PR 3)', async () => {
+    // The OTP-gated payout-change path was removed when SMS/OTP was retired
+    // (2026-05-07, PR 3). Self-service payout edits will return when the
+    // dashboard wires up to phone+PIN auth; until then the only path is
+    // support@funeralpress.org.
     const env = makeEnv({ memorial: baseMemorial() })
     const jwt = await makeJwt(FAMILY_HEAD_USER_ID)
-    const res = await worker.fetch(
-      patchReq({ payout_momo_number: '+233200000000', payout_momo_provider: 'mtn', payout_account_name: 'New' }, jwt),
-      env
-    )
-    expect(res.status).toBe(401)
-    const body = await res.json()
-    expect(body.code).toBe('otp_required')
-  })
-
-  it('payout change with valid OTP sets pending_payout_* and effective_at 24h ahead', async () => {
-    const code = '123456'
-    const codeHash = await hashOtp(code, PEPPER)
-    const otp = {
-      id: 1,
-      phone_e164: PHONE,
-      code_hash: codeHash,
-      expires_at: Date.now() + 5 * 60 * 1000,
-      attempts: 0,
-      consumed_at: null,
-      purpose: 'link',
-    }
-    const env = makeEnv({ memorial: baseMemorial(), otp })
-    const jwt = await makeJwt(FAMILY_HEAD_USER_ID)
-    const before = Date.now()
     const res = await worker.fetch(
       patchReq({
         payout_momo_number: '+233200000000',
         payout_momo_provider: 'vodafone',
         payout_account_name: 'New Holder',
-        otp_code: code,
-        phone: PHONE,
       }, jwt),
       env
     )
-    expect(res.status).toBe(200)
-    expect(env.DB._state.memorial.pending_payout_momo_number).toBe('+233200000000')
-    expect(env.DB._state.memorial.pending_payout_momo_provider).toBe('vodafone')
-    expect(env.DB._state.memorial.pending_payout_effective_at).toBeGreaterThanOrEqual(before + 24 * 3600 * 1000 - 1000)
-    // OTP consumed
-    expect(env.DB._state.otp.consumed_at).not.toBe(null)
-    // payout_changed audit row
-    expect(env.DB._state.auditRows.some(r => r.args[4] === 'memorial.payout_changed')).toBe(true)
-  })
-
-  it('payout change with wrong OTP code returns 401', async () => {
-    const codeHash = await hashOtp('123456', PEPPER)
-    const otp = {
-      id: 1,
-      phone_e164: PHONE,
-      code_hash: codeHash,
-      expires_at: Date.now() + 5 * 60 * 1000,
-      attempts: 0,
-      consumed_at: null,
-      purpose: 'link',
-    }
-    const env = makeEnv({ memorial: baseMemorial(), otp })
-    const jwt = await makeJwt(FAMILY_HEAD_USER_ID)
-    const res = await worker.fetch(
-      patchReq({
-        payout_momo_number: '+233200000000',
-        payout_momo_provider: 'vodafone',
-        payout_account_name: 'New',
-        otp_code: '999999',
-        phone: PHONE,
-      }, jwt),
-      env
-    )
-    expect(res.status).toBe(401)
+    expect(res.status).toBe(403)
+    const body = await res.json()
+    expect(body.error).toMatch(/support@funeralpress\.org/i)
+    // No pending payout fields written
     expect(env.DB._state.memorial.pending_payout_momo_number).toBeUndefined()
   })
 })

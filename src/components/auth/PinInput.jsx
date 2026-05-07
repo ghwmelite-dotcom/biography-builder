@@ -1,9 +1,9 @@
 import { useRef, useEffect } from 'react'
 
 /**
- * Six-digit PIN input. Visually mirrors OtpCodeInput (six discrete boxes,
- * paste-aware, numeric-only) but masks each digit so the PIN is not
- * shoulder-surfable. Use for sign-up, login, change, and reset flows.
+ * Six-digit PIN input. Six discrete boxes, paste-aware, numeric-only,
+ * masked so the PIN is not shoulder-surfable. Use for sign-up, login,
+ * change, and reset flows.
  *
  * Props:
  *   value          — current PIN string (digits only)

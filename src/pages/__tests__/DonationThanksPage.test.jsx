@@ -73,37 +73,8 @@ describe('DonationThanksPage', () => {
     expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
-  it('hides "Continue with phone" button when VITE_PHONE_AUTH_ENABLED is unset', () => {
+  it('shows "Continue with phone" button (always — no flag gate post PR 3)', () => {
     renderRoute()
-    expect(screen.queryByText(/continue with phone/i)).toBeNull()
-  })
-})
-
-describe('DonationThanksPage with VITE_PHONE_AUTH_ENABLED=true', () => {
-  beforeEach(() => {
-    vi.stubEnv('VITE_PHONE_AUTH_ENABLED', 'true')
-    vi.resetModules()
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      headers: new Headers({ 'content-type': 'application/json' }),
-      json: async () => DONATION,
-    })
-  })
-
-  afterEach(() => {
-    vi.unstubAllEnvs()
-    vi.resetModules()
-  })
-
-  it('shows "Continue with phone" button', async () => {
-    const { default: ThanksPage } = await import('../DonationThanksPage.jsx')
-    render(
-      <MemoryRouter initialEntries={['/m/akua-mensah/thanks?ref=ref_abc']}>
-        <Routes>
-          <Route path="/m/:slug/thanks" element={<ThanksPage />} />
-        </Routes>
-      </MemoryRouter>
-    )
     expect(screen.getByText(/continue with phone/i)).toBeInTheDocument()
   })
 })

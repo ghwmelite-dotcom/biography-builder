@@ -17,9 +17,10 @@ describe('SignInPopover', () => {
   it('clicking Sign in trigger opens the popover with the chooser inside', () => {
     const { getByText, queryByText } = render(<SignInPopover />)
     fireEvent.click(getByText('Sign in'))
-    // Popover content should now be in the DOM. We check for the popover header
-    // rather than "Continue with phone" because the phone button is gated on
-    // VITE_PHONE_AUTH_ENABLED which is unset in the test env.
+    // Popover content should now be in the DOM. The phone button is now
+    // always available (post PR 3 — flag gate dropped), so the popover
+    // header check stays focused on the chooser title rather than feature
+    // detection.
     expect(queryByText('Sign in to FuneralPress')).toBeTruthy()
   })
 })

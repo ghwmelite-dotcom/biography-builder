@@ -12,7 +12,6 @@ import { logDonationAudit, getClientIP } from './utils/auditLog.js'
 import { verifyJWT, signJWT } from './utils/jwt.js'
 import { featureFlag } from './utils/featureFlag.js'
 import { createSubaccount, resolveAccount, initialiseTransaction, verifyWebhookSignature, listTransactions, refundTransaction, PAYSTACK_WEBHOOK_IPS } from './utils/paystack.js'
-import { verifyOtp } from './utils/otp.js'
 import { getFxRate } from './utils/fxRate.js'
 import { containsProfanity } from './utils/profanity.js'
 
@@ -81,11 +80,6 @@ async function requireAdmin(request, env) {
 async function sha256Hex(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str))
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
-}
-
-function maskMomo(num) {
-  if (!num) return ''
-  return num.slice(0, 4) + '*'.repeat(Math.max(0, num.length - 7)) + num.slice(-3)
 }
 
 // Sends the family-head approval-link email via Resend. Used by donation/init
@@ -1293,51 +1287,17 @@ const handler = {
             })
           }
 
+          // Payout-change via PATCH was previously gated on a phone-OTP
+          // second factor. With OTP infrastructure removed (see PR 3,
+          // 2026-05-07), self-service payout changes go through support
+          // until a phone+PIN-authenticated form is built. Reject any
+          // attempt to change payout fields here with a clear pointer.
           if (body.payout_momo_number || body.payout_momo_provider || body.payout_account_name) {
-            if (!body.otp_code || !body.phone) {
-              return error('Changing payout requires fresh OTP verification', 401, request, 'otp_required')
-            }
-            const otpRow = await env.DB.prepare(
-              `SELECT id, code_hash, expires_at, attempts, consumed_at
-               FROM phone_otps
-               WHERE phone_e164 = ? AND purpose = 'link' AND consumed_at IS NULL
-               ORDER BY created_at DESC LIMIT 1`
-            ).bind(body.phone).first()
-            if (!otpRow) return error('No verification code pending', 401, request)
-            if (otpRow.expires_at < Date.now()) return error('Code expired', 401, request)
-            if (otpRow.attempts >= 5) return error('Too many wrong attempts', 429, request)
-
-            const codeOk = await verifyOtp(body.otp_code, otpRow.code_hash, env.OTP_PEPPER)
-            if (!codeOk) {
-              await env.DB.prepare(`UPDATE phone_otps SET attempts = attempts + 1 WHERE id = ?`).bind(otpRow.id).run()
-              return error('Wrong code', 401, request)
-            }
-            await env.DB.prepare(`UPDATE phone_otps SET consumed_at = ? WHERE id = ?`).bind(Date.now(), otpRow.id).run()
-
-            const effectiveAt = Date.now() + 24 * 3600 * 1000
-            updates.push(
-              'pending_payout_momo_number = ?',
-              'pending_payout_momo_provider = ?',
-              'pending_payout_account_name = ?',
-              'pending_payout_effective_at = ?'
+            return error(
+              'Self-service payout edits are not yet supported. Contact support@funeralpress.org to change payout details.',
+              403,
+              request,
             )
-            args.push(
-              body.payout_momo_number,
-              body.payout_momo_provider,
-              sanitizeInput(body.payout_account_name || ''),
-              effectiveAt
-            )
-
-            await logDonationAudit(env.DB, {
-              memorialId, actorUserId: Number(auth.sub),
-              action: 'memorial.payout_changed',
-              detail: {
-                old_number_masked: maskMomo(memRow.payout_momo_number),
-                new_number_masked: maskMomo(body.payout_momo_number),
-                effective_at: effectiveAt,
-              },
-              ipAddress: getClientIP(request),
-            })
           }
 
           if (updates.length === 0) return error('No updates provided', 400, request)

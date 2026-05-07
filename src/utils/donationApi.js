@@ -63,29 +63,3 @@ export const donationApi = {
   },
 }
 
-// Phone-OTP flow — lives in auth-api (relative paths use API_BASE).
-export const phoneAuthApi = {
-  async sendOtp(phone, purpose) {
-    return apiFetch('/auth/phone/send-otp', {
-      method: 'POST',
-      body: JSON.stringify({ phone, purpose }),
-      auth: false,
-    })
-  },
-  async verify(phone, code, purpose) {
-    return apiFetch('/auth/phone/verify', {
-      method: 'POST',
-      body: JSON.stringify({ phone, code, purpose }),
-      auth: false,
-    })
-  },
-  async link(phone, code) {
-    return apiFetch('/auth/phone/link', {
-      method: 'POST',
-      body: JSON.stringify({ phone, code }),
-    })
-  },
-  async unlink() {
-    return apiFetch('/auth/phone/unlink', { method: 'POST' })
-  },
-}

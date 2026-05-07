@@ -4,11 +4,6 @@ import { sanitizeInput } from './utils/sanitize.js'
 import { withSecurityHeaders } from './utils/securityHeaders.js'
 import { logAudit, getClientIP } from './utils/auditLog.js'
 import { signJWT, verifyJWT } from './utils/jwt.js'
-import { generateOtp, hashOtp, verifyOtp } from './utils/otp.js'
-import { selectProvider } from './utils/phoneRouter.js'
-import { sendTermiiOtp } from './utils/termii.js'
-import { sendTwilioOtp } from './utils/twilioVerify.js'
-import { featureFlag } from './utils/featureFlag.js'
 import { runDunningCron } from './utils/dunning.js'
 import { runD1Cleanup } from './utils/dbCleanup.js'
 import { hashPin, verifyPin, isValidPinFormat } from './utils/pinHash.js'
@@ -2320,6 +2315,39 @@ async function handlePhoneVerifyEmail(request, env) {
   return json({ message: 'Email verified.' }, 200, request)
 }
 
+async function handlePhoneResendVerification(request, env, userId) {
+  const ip = getClientIP(request)
+  // Per-user limit: 3/hr. Stricter than other phone-pin endpoints because
+  // each call sends a real Resend email and we don't want spam.
+  if (await checkPhoneRateLimit(env, `pp:resend:user:${userId}`, 3, 3600)) {
+    return error('Too many resend requests. Try again later.', 429, request)
+  }
+
+  const user = await env.DB.prepare(
+    `SELECT id, email, name, email_verified_at FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1`
+  ).bind(userId).first()
+  if (!user) return error('User not found', 404, request)
+  // No-op when the email is already verified — return 200 so the caller's UX
+  // stays simple (the banner just disappears on its next render).
+  if (user.email_verified_at) {
+    return json({ message: 'Email already verified.' }, 200, request)
+  }
+
+  const { token } = await generateAuthEmailToken(env.DB, {
+    userId, purpose: 'email_verify', ipAddress: ip,
+  })
+  const verifyLink = `${SIGNUP_BASE_URL}/auth/verify-email?token=${token}`
+  await sendVerifyEmail(env, { to: user.email, name: user.name, verifyLink })
+
+  await logAudit(env.DB, {
+    userId,
+    action: 'auth.phone_pin.verify_email_resent',
+    resourceType: 'user', resourceId: userId, ipAddress: ip,
+  })
+
+  return json({ message: 'Verification email sent. Check your inbox.' }, 200, request)
+}
+
 async function handlePhoneChangePin(request, env, userId) {
   const ip = getClientIP(request)
   const body = await request.json().catch(() => ({}))
@@ -2505,298 +2533,6 @@ const handler = {
       if (method === 'POST' && path === '/auth/phone/reset') return await handlePhoneReset(request, env)
       if (method === 'POST' && path === '/auth/phone/verify-email') return await handlePhoneVerifyEmail(request, env)
 
-      // ─── Phone OTP routes ───────────────────────────────────────────────────────
-
-      if (path === '/auth/phone/send-otp' && request.method === 'POST') {
-        if (!featureFlag(env, 'PHONE_AUTH_ENABLED')) {
-          return error('Phone auth temporarily unavailable', 503, request)
-        }
-
-        const body = await request.json().catch(() => ({}))
-        const phone = body.phone
-        const purpose = body.purpose
-        const VALID_PURPOSES = ['login', 'link', 'family_head_approval']
-
-        if (!phone || !/^\+\d{6,15}$/.test(phone)) {
-          return error('Invalid phone format. Use E.164 (e.g. +233241234567).', 400, request)
-        }
-        if (!VALID_PURPOSES.includes(purpose)) {
-          return error('Invalid purpose', 400, request)
-        }
-
-        const ip = getClientIP(request)
-
-        // Rate limits — per-phone (3/10min, 10/24h), per-IP (20/hour), per-IP-per-phone (5/hour)
-        const tenMin = 600
-        const oneHour = 3600
-        const oneDay = 86400
-
-        const phoneCount10m = parseInt(await env.RATE_LIMITS.get(`otp:phone:10m:${phone}`)) || 0
-        if (phoneCount10m >= 3) {
-          return error('Too many requests. Try again in 10 minutes.', 429, request)
-        }
-        const phoneCount24h = parseInt(await env.RATE_LIMITS.get(`otp:phone:24h:${phone}`)) || 0
-        if (phoneCount24h >= 10) {
-          return error('Daily limit reached.', 429, request)
-        }
-        const ipCount1h = parseInt(await env.RATE_LIMITS.get(`otp:ip:1h:${ip}`)) || 0
-        if (ipCount1h >= 20) {
-          return error('Too many requests from this network.', 429, request)
-        }
-        const ipPhoneCount1h = parseInt(await env.RATE_LIMITS.get(`otp:ipphone:1h:${ip}:${phone}`)) || 0
-        if (ipPhoneCount1h >= 5) {
-          return error('Too many requests.', 429, request)
-        }
-
-        // Lockout check
-        const locked = await env.RATE_LIMITS.get(`otp:lockout:${phone}`)
-        if (locked) {
-          return error('Phone temporarily locked due to too many failed attempts.', 429, request)
-        }
-
-        // Provider routing
-        let provider
-        try {
-          provider = selectProvider(phone)
-        } catch {
-          return error('Unsupported phone number', 400, request)
-        }
-
-        // Generate code, store hash
-        const code = generateOtp()
-        const codeHash = await hashOtp(code, env.OTP_PEPPER)
-        const expiresAt = Date.now() + 10 * 60 * 1000
-
-        await env.DB.prepare(
-          `INSERT INTO phone_otps (phone_e164, code_hash, provider, purpose, ip_address, user_agent, expires_at, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(
-          phone,
-          codeHash,
-          provider,
-          purpose,
-          ip,
-          request.headers.get('User-Agent') || '',
-          expiresAt,
-          Date.now()
-        ).run()
-
-        // Send via provider
-        const sendResult = provider === 'termii'
-          ? await sendTermiiOtp({ apiKey: env.TERMII_API_KEY, toE164: phone, code })
-          : await sendTwilioOtp({
-              accountSid: env.TWILIO_ACCOUNT_SID,
-              authToken: env.TWILIO_AUTH_TOKEN,
-              fromNumber: env.TWILIO_FROM_NUMBER,
-              toE164: phone,
-              code,
-            })
-
-        if (!sendResult.ok) {
-          console.error('OTP send failed', { provider, status: sendResult.status })
-          return error('Could not send code right now. Please try again.', 503, request)
-        }
-
-        // Increment rate-limit counters (after successful send)
-        await env.RATE_LIMITS.put(`otp:phone:10m:${phone}`, String(phoneCount10m + 1), { expirationTtl: tenMin })
-        await env.RATE_LIMITS.put(`otp:phone:24h:${phone}`, String(phoneCount24h + 1), { expirationTtl: oneDay })
-        await env.RATE_LIMITS.put(`otp:ip:1h:${ip}`, String(ipCount1h + 1), { expirationTtl: oneHour })
-        await env.RATE_LIMITS.put(`otp:ipphone:1h:${ip}:${phone}`, String(ipPhoneCount1h + 1), { expirationTtl: oneHour })
-
-        return json({ ok: true, provider, expires_in: 600, resend_after: 30 }, 200, request)
-      }
-
-      /**
-       * Verify an OTP for a given (phone, purpose) WITHOUT issuing JWT.
-       * Returns { ok: true } on success or { ok: false, response: <Response> } on failure.
-       */
-      async function verifyOtpForPurpose(env, request, phone, code, purpose) {
-        if (!/^\d{6}$/.test(code || '')) {
-          return { ok: false, response: error('Invalid code format', 400, request) }
-        }
-
-        const locked = await env.RATE_LIMITS.get(`otp:lockout:${phone}`)
-        if (locked) {
-          return { ok: false, response: error('Phone temporarily locked.', 429, request) }
-        }
-
-        const row = await env.DB.prepare(
-          `SELECT id, code_hash, expires_at, attempts, consumed_at
-           FROM phone_otps
-           WHERE phone_e164 = ? AND purpose = ? AND consumed_at IS NULL
-           ORDER BY created_at DESC LIMIT 1`
-        ).bind(phone, purpose).first()
-
-        if (!row) return { ok: false, response: error('No code pending for this phone', 401, request) }
-        if (row.expires_at < Date.now()) return { ok: false, response: error('Code expired. Request a new one.', 401, request) }
-        if (row.attempts >= 5) {
-          await env.RATE_LIMITS.put(`otp:lockout:${phone}`, '1', { expirationTtl: 3600 })
-          return { ok: false, response: error('Too many wrong attempts. Phone locked for 1 hour.', 429, request) }
-        }
-
-        await env.DB.prepare(`UPDATE phone_otps SET attempts = attempts + 1 WHERE id = ?`).bind(row.id).run()
-
-        const ok = await verifyOtp(code, row.code_hash, env.OTP_PEPPER)
-        if (!ok) {
-          await logAudit(env.DB, {
-            action: 'phone_otp_verify_failed',
-            detail: { phone, purpose, reason: 'wrong_code' },
-            ipAddress: getClientIP(request),
-          })
-          return { ok: false, response: error('Wrong code', 401, request) }
-        }
-
-        await env.DB.prepare(`UPDATE phone_otps SET consumed_at = ? WHERE id = ?`).bind(Date.now(), row.id).run()
-        return { ok: true }
-      }
-
-      if (path === '/auth/phone/verify' && request.method === 'POST') {
-        if (!featureFlag(env, 'PHONE_AUTH_ENABLED')) {
-          return error('Phone auth temporarily unavailable', 503, request)
-        }
-
-        const body = await request.json().catch(() => ({}))
-        const { phone, code, purpose } = body
-        if (!phone || !code || !purpose) {
-          return error('Missing fields', 400, request)
-        }
-
-        const verifyResult = await verifyOtpForPurpose(env, request, phone, code, purpose)
-        if (!verifyResult.ok) return verifyResult.response
-
-        // For non-login purposes (link, family_head_approval), don't issue JWT — caller handles.
-        if (purpose !== 'login') {
-          return json({ ok: true, verified: true }, 200, request)
-        }
-
-        // Find or create user by phone
-        let user = await env.DB.prepare(
-          `SELECT id, email, name, picture, auth_methods, phone_e164 FROM users WHERE phone_e164 = ?`
-        ).bind(phone).first()
-
-        if (!user) {
-          const result = await env.DB.prepare(
-            `INSERT INTO users (email, name, phone_e164, phone_verified_at, auth_methods, created_at)
-             VALUES (?, ?, ?, ?, ?, ?)`
-          ).bind(
-            `phone-${phone}@phone.funeralpress.org`,
-            'Phone user',
-            phone,
-            Date.now(),
-            'phone',
-            Date.now()
-          ).run()
-          user = {
-            id: result.meta.last_row_id,
-            email: null,
-            name: 'Phone user',
-            picture: null,
-            auth_methods: 'phone',
-            phone_e164: phone,
-          }
-        }
-
-        // Issue JWT (1 hour expiry — match existing pattern)
-        const token = await signJWT(
-          { sub: String(user.id), email: user.email, name: user.name, exp: Math.floor(Date.now() / 1000) + 3600 },
-          env.JWT_SECRET
-        )
-
-        // Issue refresh token — matches the existing /auth/google pattern exactly:
-        // randomHex(64) raw token, hashToken for DB storage, 30-day expiry ISO string,
-        // INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at)
-        const refreshRaw = randomHex(64)
-        const refreshHash = await hashToken(refreshRaw)
-        const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString()
-        await env.DB.prepare('INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at) VALUES (?, ?, ?, ?)')
-          .bind(generateId(), user.id, refreshHash, expiresAt).run()
-
-        await logAudit(env.DB, {
-          userId: user.id,
-          action: 'phone_login_success',
-          detail: { phone },
-          ipAddress: getClientIP(request),
-        })
-
-        return json({
-          token,
-          user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            phone_e164: user.phone_e164,
-            auth_methods: user.auth_methods,
-          },
-          refresh_token: refreshRaw,
-        }, 200, request)
-      }
-
-      if (path === '/auth/phone/link' && request.method === 'POST') {
-        if (!featureFlag(env, 'PHONE_AUTH_ENABLED')) {
-          return error('Phone auth temporarily unavailable', 503, request)
-        }
-        const auth = await authenticate(request, env)
-        if (!auth) return error('Auth required', 401, request)
-
-        const body = await request.json().catch(() => ({}))
-        const { phone, code } = body
-        if (!phone || !code) return error('Missing fields', 400, request)
-        if (!/^\+\d{6,15}$/.test(phone)) return error('Invalid phone format', 400, request)
-
-        // Conflict check — phone owned by another user
-        const existing = await env.DB.prepare(
-          `SELECT id FROM users WHERE phone_e164 = ? AND id != ?`
-        ).bind(phone, auth.sub).first()
-        if (existing) {
-          return json({ error: 'Phone already linked to another account', code: 'phone_already_linked' }, 409, request)
-        }
-
-        const verifyResult = await verifyOtpForPurpose(env, request, phone, code, 'link')
-        if (!verifyResult.ok) return verifyResult.response
-
-        const u = await env.DB.prepare(`SELECT auth_methods FROM users WHERE id = ?`).bind(auth.sub).first()
-        const methods = new Set((u?.auth_methods || 'google').split(',').filter(Boolean))
-        methods.add('phone')
-        const methodsStr = Array.from(methods).join(',')
-
-        await env.DB.prepare(
-          `UPDATE users SET phone_e164 = ?, phone_verified_at = ?, auth_methods = ? WHERE id = ?`
-        ).bind(phone, Date.now(), methodsStr, auth.sub).run()
-
-        await logAudit(env.DB, {
-          userId: auth.sub,
-          action: 'phone_linked',
-          detail: { phone },
-          ipAddress: getClientIP(request),
-        })
-
-        return json({ ok: true, phone_e164: phone, auth_methods: methodsStr }, 200, request)
-      }
-
-      if (path === '/auth/phone/unlink' && request.method === 'POST') {
-        const auth = await authenticate(request, env)
-        if (!auth) return error('Auth required', 401, request)
-
-        const u = await env.DB.prepare(`SELECT auth_methods FROM users WHERE id = ?`).bind(auth.sub).first()
-        const methods = new Set((u?.auth_methods || '').split(',').filter(Boolean))
-        if (!methods.has('google')) {
-          return error('Cannot unlink phone — would leave you with no sign-in method.', 400, request)
-        }
-        methods.delete('phone')
-        const methodsStr = Array.from(methods).join(',')
-
-        await env.DB.prepare(
-          `UPDATE users SET phone_e164 = NULL, phone_verified_at = NULL, auth_methods = ? WHERE id = ?`
-        ).bind(methodsStr, auth.sub).run()
-
-        await logAudit(env.DB, {
-          userId: auth.sub,
-          action: 'phone_unlinked',
-          ipAddress: getClientIP(request),
-        })
-
-        return json({ ok: true, auth_methods: methodsStr }, 200, request)
-      }
 
       if (method === 'GET' && path.startsWith('/images/')) return await handleImageServe(request, env, path.slice(8))
       if (method === 'POST' && path === '/payments/webhook') return await handlePaymentWebhook(request, env)
@@ -2962,6 +2698,7 @@ const handler = {
       if (method === 'GET' && path === '/subscriptions/status') return await handleSubscriptionStatus(request, env, userId)
       if (method === 'POST' && path === '/subscriptions/cancel') return await handleSubscriptionCancel(request, env, userId)
       if (method === 'POST' && path === '/auth/phone/change-pin') return await handlePhoneChangePin(request, env, userId)
+      if (method === 'POST' && path === '/auth/phone/resend-verification') return await handlePhoneResendVerification(request, env, userId)
       if (method === 'POST' && path === '/print-orders/calculate') return await handlePrintCalculate(request, env, userId)
       if (method === 'POST' && path === '/print-orders/create') return await handlePrintOrderCreate(request, env, userId)
       if (method === 'POST' && path === '/print-orders/verify') return await handlePrintOrderVerify(request, env, userId)
