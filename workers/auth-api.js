@@ -11,6 +11,9 @@ import { sendTwilioOtp } from './utils/twilioVerify.js'
 import { featureFlag } from './utils/featureFlag.js'
 import { runDunningCron } from './utils/dunning.js'
 import { runD1Cleanup } from './utils/dbCleanup.js'
+import { hashPin, verifyPin, isValidPinFormat } from './utils/pinHash.js'
+import { generateAuthEmailToken, consumeAuthEmailToken } from './utils/authEmailToken.js'
+import { sendVerifyEmail, sendPinResetEmail, sendPinChangedEmail } from './utils/authEmails.js'
 
 // FuneralPress Auth API Worker
 // Bindings: DB (D1), IMAGES (R2), JWT_SECRET (secret), GOOGLE_CLIENT_ID (var)
@@ -2027,6 +2030,322 @@ async function handleSubscriptionWebhook(request, env) {
   return json({ ok: true }, 200, request)
 }
 
+// ─── Phone + PIN auth ───────────────────────────────────────────────────────
+//
+// Replaces the deprecated /auth/phone/{send-otp,verify,link,unlink} OTP flow.
+// Spec: docs/superpowers/specs/2026-05-07-phone-pin-auth-design.md
+//
+// Per-phone rate limiting uses RATE_LIMITS KV with custom keys. The auth
+// route-group already throttles 10/min/IP at the router level — handler-level
+// limits are stricter and per-phone (so an attacker can't iterate IPs).
+
+const PHONE_E164_REGEX = /^\+[1-9]\d{6,14}$/
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const SIGNUP_BASE_URL = 'https://funeralpress.org'  // for verify/reset link domain
+
+// Custom-key rate-limit on RATE_LIMITS KV. Returns true if over limit.
+async function checkPhoneRateLimit(env, key, limit, windowSec) {
+  if (!env?.RATE_LIMITS) return false
+  const current = parseInt(await env.RATE_LIMITS.get(key)) || 0
+  if (current >= limit) return true
+  await env.RATE_LIMITS.put(key, String(current + 1), { expirationTtl: windowSec })
+  return false
+}
+
+async function handlePhoneSignup(request, env) {
+  // Per-IP limit: 5 signups/hr. The 'auth' route-group covers per-minute
+  // bursts; this is the lower-frequency abuse cap.
+  const ip = getClientIP(request)
+  if (await checkPhoneRateLimit(env, `pp:signup:ip:${ip}`, 5, 3600)) {
+    return error('Too many signups from this IP. Try again later.', 429, request)
+  }
+
+  const body = await request.json().catch(() => ({}))
+  const phone = (body.phone || '').trim()
+  const email = (body.email || '').trim().toLowerCase()
+  const pin = body.pin
+  const name = (body.name || '').trim()
+
+  if (!PHONE_E164_REGEX.test(phone)) return error('Invalid phone number format', 400, request)
+  if (!EMAIL_REGEX.test(email)) return error('Invalid email address', 400, request)
+  if (!isValidPinFormat(pin)) return error('PIN must be exactly 6 digits', 400, request)
+  if (!name || name.length > 100) return error('Name is required (1–100 characters)', 400, request)
+
+  // Conflict checks. Both columns are nullable for legacy rows; only conflict
+  // on rows that aren't soft-deleted.
+  const phoneConflict = await env.DB.prepare(
+    `SELECT id FROM users WHERE phone_e164 = ? AND deleted_at IS NULL LIMIT 1`
+  ).bind(phone).first()
+  if (phoneConflict) return error('A user with that phone number already exists', 409, request)
+
+  const emailConflict = await env.DB.prepare(
+    `SELECT id FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1`
+  ).bind(email).first()
+  if (emailConflict) return error('A user with that email already exists', 409, request)
+
+  const pinHash = await hashPin(pin)
+  const userId = generateId()
+  const now = Date.now()
+
+  // google_id is NOT NULL in production; phone+PIN users get a synthesized
+  // value distinct from the legacy synthesized email pattern (so the
+  // migration cleanup heuristic doesn't sweep them up later).
+  await env.DB.prepare(
+    `INSERT INTO users
+       (id, google_id, email, name, phone_e164, pin_hash, pin_set_at,
+        auth_methods, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    userId, `phone-pin:${phone}`, email, sanitizeInput(name), phone,
+    pinHash, now, 'phone-pin', now
+  ).run()
+
+  // Email verification token + link.
+  const { token } = await generateAuthEmailToken(env.DB, {
+    userId, purpose: 'email_verify', ipAddress: ip,
+  })
+  const verifyLink = `${SIGNUP_BASE_URL}/auth/verify-email?token=${token}`
+  // Send email; failure is non-fatal (caller can request a re-send later).
+  await sendVerifyEmail(env, { to: email, name, verifyLink })
+
+  await logAudit(env.DB, {
+    userId,
+    action: 'auth.phone_pin.signup',
+    resourceType: 'user',
+    resourceId: userId,
+    detail: { phone, email },
+    ipAddress: ip,
+  })
+
+  return json({
+    userId,
+    message: 'Account created. Check your email to verify.',
+  }, 201, request)
+}
+
+async function handlePhoneLogin(request, env) {
+  const body = await request.json().catch(() => ({}))
+  const phone = (body.phone || '').trim()
+  const pin = body.pin
+  const ip = getClientIP(request)
+
+  if (!PHONE_E164_REGEX.test(phone)) return error('Invalid phone or PIN', 401, request)
+  if (!isValidPinFormat(pin)) return error('Invalid phone or PIN', 401, request)
+
+  // Per-phone limit: 5 attempts per 15 min. Per-IP limit (router) is 10/min.
+  if (await checkPhoneRateLimit(env, `pp:login:phone:${phone}`, 5, 900)) {
+    return error('Too many attempts. Try again later.', 429, request)
+  }
+
+  const user = await env.DB.prepare(
+    `SELECT id, email, name, phone_e164, pin_hash, pin_failed_attempts,
+            pin_lockout_until, email_verified_at, auth_methods, deleted_at
+       FROM users WHERE phone_e164 = ? AND deleted_at IS NULL LIMIT 1`
+  ).bind(phone).first()
+  // Always do a constant-time PIN compare (with a dummy hash if user is
+  // missing) to avoid timing-leak phone enumeration.
+  const dummyHash = 'pbkdf2$600000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  const hashToCheck = user?.pin_hash || dummyHash
+
+  if (user?.pin_lockout_until && user.pin_lockout_until > Date.now()) {
+    return json({
+      error: 'Account temporarily locked due to wrong PIN attempts',
+      retry_after_ms: user.pin_lockout_until - Date.now(),
+    }, 423, request)
+  }
+
+  const ok = await verifyPin(pin, hashToCheck)
+  if (!user || !ok) {
+    if (user) {
+      const newAttempts = (user.pin_failed_attempts || 0) + 1
+      const lockoutUntil = newAttempts >= 5 ? Date.now() + 60 * 60 * 1000 : null
+      await env.DB.prepare(
+        `UPDATE users SET pin_failed_attempts = ?, pin_lockout_until = ?, updated_at = datetime('now') WHERE id = ?`
+      ).bind(newAttempts, lockoutUntil, user.id).run()
+    }
+    return error('Wrong phone or PIN', 401, request)
+  }
+
+  // Reset failed-attempts counter + lockout on success.
+  await env.DB.prepare(
+    `UPDATE users SET pin_failed_attempts = 0, pin_lockout_until = NULL, updated_at = datetime('now') WHERE id = ?`
+  ).bind(user.id).run()
+
+  const accessToken = await signJWT(
+    { sub: user.id, email: user.email, exp: Math.floor(Date.now() / 1000) + 3600 },
+    env.JWT_SECRET
+  )
+  const refreshRaw = randomHex(64)
+  const refreshHash = await hashToken(refreshRaw)
+  const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString()
+  await env.DB.prepare(
+    `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at) VALUES (?, ?, ?, ?)`
+  ).bind(generateId(), user.id, refreshHash, expiresAt).run()
+
+  const purchaseData = await getUserPurchaseData(env, user.id)
+  const hasAdminPriv = await isAdmin(user.id, user.email, env)
+
+  await logAudit(env.DB, {
+    userId: user.id,
+    action: 'auth.phone_pin.login',
+    resourceType: 'user',
+    resourceId: user.id,
+    ipAddress: ip,
+  })
+
+  return json({
+    user: {
+      id: user.id, email: user.email, name: user.name, phone: user.phone_e164,
+      isAdmin: hasAdminPriv,
+      isSuperAdmin: isSuperAdmin(user.email),
+      emailVerified: !!user.email_verified_at,
+      credits: purchaseData.credits,
+      isUnlimited: purchaseData.isUnlimited,
+      unlockedDesigns: purchaseData.unlockedDesigns,
+    },
+    accessToken,
+    refreshToken: refreshRaw,
+  }, 200, request)
+}
+
+async function handlePhoneForgot(request, env) {
+  const body = await request.json().catch(() => ({}))
+  const phone = (body.phone || '').trim()
+  const ip = getClientIP(request)
+
+  // Per-phone (3/hr) and per-IP (10/hr). Even on a malformed phone we return
+  // 202 to avoid leaking validity.
+  if (PHONE_E164_REGEX.test(phone)) {
+    if (await checkPhoneRateLimit(env, `pp:forgot:phone:${phone}`, 3, 3600)) {
+      return json({ message: 'If an account matches, a reset link is on its way.' }, 202, request)
+    }
+  }
+  if (await checkPhoneRateLimit(env, `pp:forgot:ip:${ip}`, 10, 3600)) {
+    return json({ message: 'If an account matches, a reset link is on its way.' }, 202, request)
+  }
+
+  if (PHONE_E164_REGEX.test(phone)) {
+    const user = await env.DB.prepare(
+      `SELECT id, email, name, email_verified_at FROM users
+        WHERE phone_e164 = ? AND deleted_at IS NULL LIMIT 1`
+    ).bind(phone).first()
+    if (user && user.email_verified_at) {
+      const { token } = await generateAuthEmailToken(env.DB, {
+        userId: user.id, purpose: 'pin_reset', ipAddress: ip,
+      })
+      const resetLink = `${SIGNUP_BASE_URL}/auth/reset-pin?token=${token}`
+      await sendPinResetEmail(env, { to: user.email, name: user.name, resetLink })
+      await logAudit(env.DB, {
+        userId: user.id,
+        action: 'auth.phone_pin.forgot_requested',
+        resourceType: 'user', resourceId: user.id, ipAddress: ip,
+      })
+    }
+  }
+
+  // Always 202, regardless of whether anything happened.
+  return json({ message: 'If an account matches, a reset link is on its way.' }, 202, request)
+}
+
+async function handlePhoneReset(request, env) {
+  const ip = getClientIP(request)
+  if (await checkPhoneRateLimit(env, `pp:reset:ip:${ip}`, 5, 3600)) {
+    return error('Too many reset attempts. Try again later.', 429, request)
+  }
+
+  const body = await request.json().catch(() => ({}))
+  const token = body.token
+  const newPin = body.new_pin
+
+  if (!isValidPinFormat(newPin)) return error('PIN must be exactly 6 digits', 400, request)
+
+  const consumed = await consumeAuthEmailToken(env.DB, { token, purpose: 'pin_reset' })
+  if (!consumed.ok) return error('Reset link is invalid or expired', 401, request)
+
+  const user = await env.DB.prepare(
+    `SELECT id, email, name FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1`
+  ).bind(consumed.userId).first()
+  if (!user) return error('Reset link is invalid or expired', 401, request)
+
+  const newHash = await hashPin(newPin)
+  await env.DB.prepare(
+    `UPDATE users
+        SET pin_hash = ?, pin_set_at = ?, pin_failed_attempts = 0,
+            pin_lockout_until = NULL, updated_at = datetime('now')
+      WHERE id = ?`
+  ).bind(newHash, Date.now(), user.id).run()
+
+  // Invalidate ALL existing refresh tokens for this user — force re-login on
+  // every device. Critical: the assumption behind "I forgot my PIN" is
+  // exactly that the user (or an attacker) might have lost session control.
+  await env.DB.prepare(`DELETE FROM refresh_tokens WHERE user_id = ?`).bind(user.id).run()
+
+  await sendPinChangedEmail(env, { to: user.email, name: user.name, ipAddress: ip })
+  await logAudit(env.DB, {
+    userId: user.id,
+    action: 'auth.phone_pin.pin_reset',
+    resourceType: 'user', resourceId: user.id, ipAddress: ip,
+  })
+
+  return json({ message: 'PIN reset. Log in with your new PIN.' }, 200, request)
+}
+
+async function handlePhoneVerifyEmail(request, env) {
+  const ip = getClientIP(request)
+  const body = await request.json().catch(() => ({}))
+  const token = body.token
+
+  const consumed = await consumeAuthEmailToken(env.DB, { token, purpose: 'email_verify' })
+  if (!consumed.ok) return error('Verification link is invalid or expired', 401, request)
+
+  await env.DB.prepare(
+    `UPDATE users SET email_verified_at = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(Date.now(), consumed.userId).run()
+
+  await logAudit(env.DB, {
+    userId: consumed.userId,
+    action: 'auth.phone_pin.email_verified',
+    resourceType: 'user', resourceId: consumed.userId, ipAddress: ip,
+  })
+
+  return json({ message: 'Email verified.' }, 200, request)
+}
+
+async function handlePhoneChangePin(request, env, userId) {
+  const ip = getClientIP(request)
+  const body = await request.json().catch(() => ({}))
+  const currentPin = body.current_pin
+  const newPin = body.new_pin
+
+  if (!isValidPinFormat(newPin)) return error('New PIN must be exactly 6 digits', 400, request)
+
+  const user = await env.DB.prepare(
+    `SELECT id, email, name, pin_hash FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1`
+  ).bind(userId).first()
+  if (!user) return error('User not found', 404, request)
+  if (!user.pin_hash) return error('Account does not use PIN auth', 400, request)
+
+  const ok = await verifyPin(currentPin, user.pin_hash)
+  if (!ok) return error('Current PIN is wrong', 401, request)
+
+  const newHash = await hashPin(newPin)
+  await env.DB.prepare(
+    `UPDATE users
+        SET pin_hash = ?, pin_set_at = ?, pin_failed_attempts = 0,
+            pin_lockout_until = NULL, updated_at = datetime('now')
+      WHERE id = ?`
+  ).bind(newHash, Date.now(), user.id).run()
+
+  await sendPinChangedEmail(env, { to: user.email, name: user.name, ipAddress: ip })
+  await logAudit(env.DB, {
+    userId: user.id,
+    action: 'auth.phone_pin.pin_changed',
+    resourceType: 'user', resourceId: user.id, ipAddress: ip,
+  })
+
+  return json({ message: 'PIN updated.' }, 200, request)
+}
+
 // ─── Venues ─────────────────────────────────────────────────────────────────
 
 async function handleListVenues(request, env) {
@@ -2169,6 +2488,13 @@ const handler = {
       // Public routes
       if (method === 'POST' && path === '/auth/google') return await handleGoogleLogin(request, env)
       if (method === 'POST' && path === '/auth/refresh') return await handleRefresh(request, env)
+
+      // ─── Phone + PIN auth (replaces /auth/phone/* OTP flow) ──────────────────
+      if (method === 'POST' && path === '/auth/phone/signup') return await handlePhoneSignup(request, env)
+      if (method === 'POST' && path === '/auth/phone/login') return await handlePhoneLogin(request, env)
+      if (method === 'POST' && path === '/auth/phone/forgot') return await handlePhoneForgot(request, env)
+      if (method === 'POST' && path === '/auth/phone/reset') return await handlePhoneReset(request, env)
+      if (method === 'POST' && path === '/auth/phone/verify-email') return await handlePhoneVerifyEmail(request, env)
 
       // ─── Phone OTP routes ───────────────────────────────────────────────────────
 
@@ -2626,6 +2952,7 @@ const handler = {
       if (method === 'POST' && path === '/subscriptions/create') return await handleSubscriptionCreate(request, env, userId)
       if (method === 'GET' && path === '/subscriptions/status') return await handleSubscriptionStatus(request, env, userId)
       if (method === 'POST' && path === '/subscriptions/cancel') return await handleSubscriptionCancel(request, env, userId)
+      if (method === 'POST' && path === '/auth/phone/change-pin') return await handlePhoneChangePin(request, env, userId)
       if (method === 'POST' && path === '/print-orders/calculate') return await handlePrintCalculate(request, env, userId)
       if (method === 'POST' && path === '/print-orders/create') return await handlePrintOrderCreate(request, env, userId)
       if (method === 'POST' && path === '/print-orders/verify') return await handlePrintOrderVerify(request, env, userId)
