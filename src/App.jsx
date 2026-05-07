@@ -69,6 +69,9 @@ const FamilyHeadApprovalPage = lazy(() => import('./pages/FamilyHeadApprovalPage
 const FamilyHeadDashboardPage = lazy(() => import('./pages/FamilyHeadDashboardPage.jsx'))
 const DonationPrivacyPage = lazy(() => import('./pages/DonationPrivacyPage.jsx'))
 const OnboardingTour = lazy(() => import('./components/onboarding/OnboardingTour.jsx'))
+const ResetPinPage = lazy(() => import('./pages/ResetPinPage.jsx'))
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage.jsx'))
+const EmailVerificationBanner = lazy(() => import('./components/auth/EmailVerificationBanner.jsx').then((m) => ({ default: m.EmailVerificationBanner })))
 
 function LoadingFallback() {
   return (
@@ -127,6 +130,9 @@ export default function App() {
         <PrintOrderDialog />
         <BrowserRouter>
           <RouteProgressBar />
+          <Suspense fallback={null}>
+            <EmailVerificationBanner />
+          </Suspense>
           <Suspense fallback={<RouteSkeleton />}>
             <PageTransition>
             <Routes>
@@ -181,6 +187,8 @@ export default function App() {
               <Route path="/approve/:token" element={<FamilyHeadApprovalPage />} />
               <Route path="/family-head/:memorialId" element={<FamilyHeadDashboardPage />} />
               <Route path="/privacy/donations" element={<DonationPrivacyPage />} />
+              <Route path="/auth/reset-pin" element={<ResetPinPage />} />
+              <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
             </Routes>
             </PageTransition>
           </Suspense>

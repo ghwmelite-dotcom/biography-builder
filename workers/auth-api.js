@@ -392,8 +392,12 @@ async function handleGoogleLogin(request, env) {
       name: googleUser.name,
       picture: googleUser.picture,
     }
-    await env.DB.prepare('INSERT INTO users (id, google_id, email, name, picture) VALUES (?, ?, ?, ?, ?)')
-      .bind(user.id, user.google_id, user.email, user.name, user.picture).run()
+    // Google's email is pre-verified by Google, so we mirror the migration
+    // backfill behaviour and set email_verified_at = now for new Google users.
+    user.email_verified_at = Date.now()
+    await env.DB.prepare(
+      'INSERT INTO users (id, google_id, email, name, picture, email_verified_at) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(user.id, user.google_id, user.email, user.name, user.picture, user.email_verified_at).run()
   } else {
     await env.DB.prepare("UPDATE users SET name = ?, picture = ?, email = ?, updated_at = datetime('now') WHERE id = ?")
       .bind(googleUser.name, googleUser.picture, googleUser.email, user.id).run()
@@ -426,6 +430,9 @@ async function handleGoogleLogin(request, env) {
       partnerType: user.partner_type || null, partnerLogoUrl: user.partner_logo_url || null, partnerDenomination: user.partner_denomination || null,
       isAdmin: hasAdminPriv,
       isSuperAdmin: isSuperAdmin(user.email),
+      // Google's email is verified by Google — backfilled by the phone+PIN
+      // migration for existing rows, set at INSERT for new ones above.
+      email_verified_at: user.email_verified_at || null,
       credits: purchaseData.credits,
       isUnlimited: purchaseData.isUnlimited,
       unlockedDesigns: purchaseData.unlockedDesigns,
@@ -2198,7 +2205,9 @@ async function handlePhoneLogin(request, env) {
       id: user.id, email: user.email, name: user.name, phone: user.phone_e164,
       isAdmin: hasAdminPriv,
       isSuperAdmin: isSuperAdmin(user.email),
-      emailVerified: !!user.email_verified_at,
+      // Field shape matches the Google login response so the frontend
+      // EmailVerificationBanner reads the same key for both auth methods.
+      email_verified_at: user.email_verified_at || null,
       credits: purchaseData.credits,
       isUnlimited: purchaseData.isUnlimited,
       unlockedDesigns: purchaseData.unlockedDesigns,

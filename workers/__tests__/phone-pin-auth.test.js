@@ -281,7 +281,7 @@ describe('POST /auth/phone/login', () => {
     expect(body.accessToken).toBeTruthy()
     expect(body.refreshToken).toBeTruthy()
     expect(body.user.phone).toBe(PHONE)
-    expect(body.user.emailVerified).toBe(true)
+    expect(body.user.email_verified_at).toBeTruthy()
     expect(env.DB._state.refreshTokens).toHaveLength(1)
   })
 
