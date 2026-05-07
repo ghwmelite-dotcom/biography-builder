@@ -29,14 +29,13 @@ id = "3cf6b47818c04ca8828461650478a6c1"
 # OTP_KV binding intentionally removed — phone OTPs persist to D1
 # `phone_otps`, no code path reads or writes the KV namespace.
 
-# ─── Secrets required for phone-auth routes (set via `wrangler secret put`) ───
-# TERMII_API_KEY            — Termii API key for Ghana SMS
-# TWILIO_ACCOUNT_SID        — Twilio Account SID for international SMS
-# TWILIO_AUTH_TOKEN         — Twilio Auth Token
-# TWILIO_FROM_NUMBER        — Twilio phone number (E.164) used as SMS sender
-# OTP_PEPPER                — 32-byte random secret; generate with:
-#                             node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-# JWT_SECRET                — already set (existing); shared with donation-api worker
+# ─── Required secrets (set via `wrangler secret put`) ───
+# JWT_SECRET                — shared with donation-api worker; signs/verifies session tokens
+# PAYSTACK_SECRET_KEY       — Paystack live secret key (for subscription webhooks)
+# RESEND_API_KEY            — for dunning + auth email-verify + PIN-reset emails
+# SENTRY_DSN                — Sentry workers DSN (project funeralpress-workers, EU)
+# ADMIN_SECRET              — header for legacy admin endpoints (X-Admin-Secret)
+# GOOGLE_CLIENT_ID          — set via [vars] above; not a secret
 
 [[routes]]
 pattern = "auth-api.funeralpress.org/*"
