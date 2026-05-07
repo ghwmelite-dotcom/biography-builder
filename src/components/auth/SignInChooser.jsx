@@ -1,35 +1,51 @@
 import { useState } from 'react'
 import GoogleLoginButton from './GoogleLoginButton.jsx'
-import { PhoneAuthDialog } from './PhoneAuthDialog.jsx'
-
-// Vite inlines this string at build time. To enable the phone-auth UI in
-// production: set VITE_PHONE_AUTH_ENABLED=true in .env.production AND set
-// PHONE_AUTH_ENABLED="true" in workers/auth-api-wrangler.toml. Both gates are
-// required so the UI doesn't show before the SMS provider is configured.
-const PHONE_AUTH_ENABLED = import.meta.env.VITE_PHONE_AUTH_ENABLED === 'true'
+import { PhonePinLoginDialog } from './PhonePinLoginDialog.jsx'
+import { PhonePinSignupDialog } from './PhonePinSignupDialog.jsx'
+import { ForgotPinDialog } from './ForgotPinDialog.jsx'
 
 export function SignInChooser() {
-  const [phoneOpen, setPhoneOpen] = useState(false)
+  const [loginOpen, setLoginOpen] = useState(false)
+  const [signupOpen, setSignupOpen] = useState(false)
+  const [forgotOpen, setForgotOpen] = useState(false)
+
   return (
     <>
       <div className="flex flex-col gap-3 w-full max-w-sm">
         <GoogleLoginButton />
-        {PHONE_AUTH_ENABLED && (
+        <button
+          type="button"
+          onClick={() => setLoginOpen(true)}
+          className="w-full border border-input bg-card text-foreground font-medium py-3 rounded-lg hover:bg-muted transition-colors"
+        >
+          Continue with phone
+        </button>
+        <p className="text-sm text-muted-foreground text-center">
+          Don&apos;t have an account?{' '}
           <button
-            onClick={() => setPhoneOpen(true)}
-            className="w-full border border-input bg-card text-foreground font-medium py-3 rounded-lg hover:bg-muted transition-colors"
+            type="button"
+            onClick={() => setSignupOpen(true)}
+            className="underline text-foreground"
           >
-            Continue with phone
+            Sign up
           </button>
-        )}
+        </p>
       </div>
-      {PHONE_AUTH_ENABLED && (
-        <PhoneAuthDialog
-          open={phoneOpen}
-          onOpenChange={setPhoneOpen}
-          purpose="login"
-        />
-      )}
+
+      <PhonePinLoginDialog
+        open={loginOpen}
+        onOpenChange={setLoginOpen}
+        onForgotPin={() => setForgotOpen(true)}
+        onSwitchToSignup={() => setSignupOpen(true)}
+      />
+      <PhonePinSignupDialog
+        open={signupOpen}
+        onOpenChange={setSignupOpen}
+        onSwitchToLogin={() => setLoginOpen(true)}
+      />
+      <ForgotPinDialog open={forgotOpen} onOpenChange={setForgotOpen} />
     </>
   )
 }
+
+export default SignInChooser
