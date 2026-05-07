@@ -30,17 +30,13 @@ DONATIONS_GLOBAL_PAUSED = "false"
 RECONCILIATION_ENABLED = "true"
 TIP_DEFAULT_PERCENT = "5"
 
-# ─── Secrets required (set via `wrangler secret put` before deploy) ───
+# ─── Required secrets (set via `wrangler secret put` before deploy) ───
 # PAYSTACK_SECRET_KEY       — Paystack live or test secret key
-# PAYSTACK_WEBHOOK_SECRET   — secret used to HMAC-verify Paystack webhooks
+# PAYSTACK_WEBHOOK_SECRET   — used to HMAC-verify Paystack webhooks
 # JWT_SECRET                — same as auth-api worker (verifies JWTs issued there)
-# OTP_PEPPER                — same as auth-api worker
-# TERMII_API_KEY            — for SMS to family head invite
-# TWILIO_ACCOUNT_SID
-# TWILIO_AUTH_TOKEN
-# TWILIO_FROM_NUMBER
-# RESEND_API_KEY            — for receipt emails
+# RESEND_API_KEY            — for donation receipts + family-head invite emails
 # OXR_APP_ID                — Open Exchange Rates app id (for FX rate fetch)
+# SENTRY_DSN                — Sentry workers DSN (project funeralpress-workers, EU)
 
 [triggers]
 crons = ["0 4 * * *"]    # Daily reconciliation 04:00 UTC
