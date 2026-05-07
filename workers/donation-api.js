@@ -88,9 +88,72 @@ function maskMomo(num) {
   return num.slice(0, 4) + '*'.repeat(Math.max(0, num.length - 7)) + num.slice(-3)
 }
 
-// Token + OTP gate shared by approve and reject. Returns { ok: true, memRow, user } or
-// { ok: false, response } where response is a finalised error Response.
-async function verifyApprovalRequest(env, request, memorialId, token, otpCode, phone) {
+// Sends the family-head approval-link email via Resend. Used by donation/init
+// when family_head.mode === 'invite'. Replaces the previous SMS-only delivery
+// path. Failure is non-fatal — donation/init still records the invite as
+// pending so support can re-deliver if needed.
+async function sendInviteEmail(env, { toEmail, familyHeadName, deceasedName, approvalLink }) {
+  if (!env.RESEND_API_KEY) {
+    console.warn('[donation-api] RESEND_API_KEY missing; skipping family-head invite email to', toEmail)
+    return { ok: false, error: 'resend_not_configured' }
+  }
+  const safeName = familyHeadName || 'there'
+  const safeDeceased = deceasedName || 'a memorial'
+  const subject = `You've been named family head for ${safeDeceased}`
+  const text = `Hi ${safeName},
+
+You've been invited to be the family head for the memorial of ${safeDeceased} on FuneralPress.
+
+This means donations made in their honour will be paid out to the mobile-money account on file. Please review the memorial and approve or reject:
+
+${approvalLink}
+
+This link expires in 24 hours. If you weren't expecting this invitation, please ignore this email.
+
+— The FuneralPress team`
+  const html = `<p>Hi ${safeName},</p>
+<p>You've been invited to be the family head for the memorial of <strong>${safeDeceased}</strong> on FuneralPress.</p>
+<p>This means donations made in their honour will be paid out to the mobile-money account on file. Please review the memorial and approve or reject:</p>
+<p><a href="${approvalLink}">${approvalLink}</a></p>
+<p>This link expires in 24 hours. If you weren't expecting this invitation, please ignore this email.</p>
+<p>— The FuneralPress team</p>`
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'FuneralPress <notifications@funeralpress.org>',
+        to: [toEmail],
+        subject,
+        html,
+        text,
+      }),
+    })
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '')
+      console.error('[donation-api] Resend non-2xx for invite:', res.status, errBody.slice(0, 200))
+      return { ok: false, error: `resend_${res.status}` }
+    }
+    return { ok: true }
+  } catch (e) {
+    console.error('[donation-api] Resend send failed for invite:', e?.message || e)
+    return { ok: false, error: e?.message || 'resend_threw' }
+  }
+}
+
+// Token gate for approve and reject. The signed JWT is bound to the family
+// head's phone + memorial_id (24h TTL), and the corresponding sha256 hash is
+// stored on the memorials row at invite time — so possessing the link from the
+// invite email is sufficient identity proof. The OTP second-factor that used
+// to live here was deprecated 2026-05-07: SMS infrastructure is no longer a
+// dependency, and the email delivery channel is the actual proof-of-identity.
+//
+// Returns { ok: true, memRow, user } or { ok: false, response } where
+// response is a finalised error Response.
+async function verifyApprovalRequest(env, request, memorialId, token, phone) {
   const tokenPayload = await verifyJWT(token, env.JWT_SECRET)
   if (!tokenPayload) return { ok: false, response: error('Invalid or expired approval link', 401, request) }
   if (tokenPayload.scope !== 'family_head_approval') return { ok: false, response: error('Wrong token scope', 401, request) }
@@ -105,36 +168,21 @@ async function verifyApprovalRequest(env, request, memorialId, token, otpCode, p
   if (!memRow) return { ok: false, response: error('Approval link is no longer valid', 401, request) }
   if (memRow.approval_token_expires_at < Date.now()) return { ok: false, response: error('Approval link expired', 401, request) }
 
-  const otpRow = await env.DB.prepare(
-    `SELECT id, code_hash, expires_at, attempts, consumed_at
-     FROM phone_otps
-     WHERE phone_e164 = ? AND purpose = ? AND consumed_at IS NULL
-     ORDER BY created_at DESC LIMIT 1`
-  ).bind(phone, 'family_head_approval').first()
-
-  if (!otpRow) return { ok: false, response: error('No verification code pending', 401, request) }
-  if (otpRow.expires_at < Date.now()) return { ok: false, response: error('Verification code expired', 401, request) }
-  if (otpRow.attempts >= 5) return { ok: false, response: error('Too many wrong attempts', 429, request) }
-
-  await env.DB.prepare(`UPDATE phone_otps SET attempts = attempts + 1 WHERE id = ?`).bind(otpRow.id).run()
-
-  const codeOk = await verifyOtp(otpCode, otpRow.code_hash, env.OTP_PEPPER)
-  if (!codeOk) return { ok: false, response: error('Wrong code', 401, request) }
-
-  await env.DB.prepare(`UPDATE phone_otps SET consumed_at = ? WHERE id = ?`).bind(Date.now(), otpRow.id).run()
-
   // Find or create user for this phone. users.id is TEXT PRIMARY KEY (UUID), not autoincrement.
   let user = await env.DB.prepare(`SELECT id FROM users WHERE phone_e164 = ?`).bind(phone).first()
   if (!user) {
     const newId = crypto.randomUUID()
     // google_id is NOT NULL in production; phone-only users get a synthesised value.
+    // Email column gets the family-head invite email when present (real address);
+    // legacy phone-only path falls back to the synthesised local-only address.
+    const fallbackEmail = memRow.family_head_email || `phone-${phone}@phone.funeralpress.org`
     await env.DB.prepare(
       `INSERT INTO users (id, google_id, email, name, phone_e164, phone_verified_at, auth_methods, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       newId,
       `phone:${phone}`,
-      `phone-${phone}@phone.funeralpress.org`,
+      fallbackEmail,
       memRow.family_head_name || 'Family head',
       phone, Date.now(), 'phone', Date.now()
     ).run()
@@ -750,6 +798,13 @@ const handler = {
           if (family_head.mode === 'invite' && !/^\+\d{6,15}$/.test(family_head.phone || '')) {
             return error('Invalid family_head.phone for invite mode', 400, request)
           }
+          // Email is required for invite mode — it's the channel that delivers
+          // the approval link. Phone stays for identity but is no longer the
+          // delivery channel (no SMS provider in production).
+          if (family_head.mode === 'invite' &&
+              !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(family_head.email || '')) {
+            return error('Invalid family_head.email for invite mode', 400, request)
+          }
 
           // Fetch memorial from KV; verify creator
           const kvRaw = await env.MEMORIAL_PAGES_KV.get(memorialId)
@@ -858,14 +913,14 @@ const handler = {
 
           await env.DB.prepare(
             `INSERT INTO memorials (
-              id, slug, creator_user_id, family_head_phone, family_head_name, family_head_self_declared,
+              id, slug, creator_user_id, family_head_phone, family_head_email, family_head_name, family_head_self_declared,
               paystack_subaccount_code, payout_momo_number, payout_momo_provider, payout_account_name,
               wall_mode, goal_amount_pesewas, approval_status, approval_token_hash, approval_token_expires_at,
               created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           ).bind(
             memorialId, slug, Number(auth.sub),
-            family_head.phone, sanitizeInput(family_head.name), 0,
+            family_head.phone, family_head.email, sanitizeInput(family_head.name), 0,
             sub.subaccount_code, payout_momo_number, payout_momo_provider, sanitizedAccountName,
             wall_mode, goal_amount_pesewas || null,
             'pending', tokenHash, tokenPayload.exp * 1000,
@@ -885,32 +940,19 @@ const handler = {
           await env.MEMORIAL_PAGES_KV.put(memorialId, JSON.stringify(memorialData))
 
           // Send SMS via routed provider
-          const { selectProvider } = await import('./utils/phoneRouter.js')
-          const { sendTermiiSms } = await import('./utils/termii.js')
-          const { sendTwilioSms } = await import('./utils/twilioVerify.js')
-
-          let provider
-          try { provider = selectProvider(family_head.phone) } catch { provider = null }
-          if (!provider) return error('Invalid family head phone country code', 400, request)
-
           const approvalLink = `https://funeralpress.org/approve/${approvalToken}`
-          const smsMessage = `${family_head.name}: You've been named family head for ${memorialData.deceased_name || 'a memorial'} on FuneralPress. Review and approve: ${approvalLink}`
-
-          const sendResult = provider === 'termii'
-            ? await sendTermiiSms({ apiKey: env.TERMII_API_KEY, toE164: family_head.phone, message: smsMessage })
-            : await sendTwilioSms({
-                accountSid: env.TWILIO_ACCOUNT_SID,
-                authToken: env.TWILIO_AUTH_TOKEN,
-                fromNumber: env.TWILIO_FROM_NUMBER,
-                toE164: family_head.phone,
-                message: smsMessage,
-              })
+          const sendResult = await sendInviteEmail(env, {
+            toEmail: family_head.email,
+            familyHeadName: family_head.name,
+            deceasedName: memorialData.deceased_name || 'a memorial',
+            approvalLink,
+          })
 
           if (!sendResult.ok) {
             await logDonationAudit(env.DB, {
               memorialId, actorUserId: Number(auth.sub),
-              action: 'family_head.invite_sms_failed',
-              detail: { provider, error: sendResult.error },
+              action: 'family_head.invite_email_failed',
+              detail: { error: sendResult.error },
               ipAddress: getClientIP(request),
             })
           }
@@ -918,24 +960,30 @@ const handler = {
           await logDonationAudit(env.DB, {
             memorialId, actorUserId: Number(auth.sub),
             action: 'family_head.invited',
-            detail: { phone: family_head.phone, name: family_head.name, expires_at: tokenPayload.exp * 1000 },
+            detail: {
+              phone: family_head.phone,
+              email: family_head.email,
+              name: family_head.name,
+              expires_at: tokenPayload.exp * 1000,
+            },
             ipAddress: getClientIP(request),
           })
 
           return json({
             memorial_id: memorialId,
             approval_status: 'pending',
-            invite_sent_to: family_head.phone,
+            invite_sent_to: family_head.email,
+            invite_phone: family_head.phone,
             expires_at: tokenPayload.exp * 1000,
           }, 200, request)
         }
 
         if (action === 'approve' && request.method === 'POST') {
           const body = await request.json().catch(() => ({}))
-          const { token, otp_code, phone } = body
-          if (!token || !otp_code || !phone) return error('Missing fields', 400, request)
+          const { token, phone } = body
+          if (!token || !phone) return error('Missing fields', 400, request)
 
-          const verification = await verifyApprovalRequest(env, request, memorialId, token, otp_code, phone)
+          const verification = await verifyApprovalRequest(env, request, memorialId, token, phone)
           if (!verification.ok) return verification.response
           const { user } = verification
 
@@ -1312,11 +1360,11 @@ const handler = {
 
         if (action === 'reject' && request.method === 'POST') {
           const body = await request.json().catch(() => ({}))
-          const { token, otp_code, phone, reason } = body
-          if (!token || !otp_code || !phone) return error('Missing fields', 400, request)
+          const { token, phone, reason } = body
+          if (!token || !phone) return error('Missing fields', 400, request)
           if (reason && reason.length > 500) return error('Reason too long', 400, request)
 
-          const verification = await verifyApprovalRequest(env, request, memorialId, token, otp_code, phone)
+          const verification = await verifyApprovalRequest(env, request, memorialId, token, phone)
           if (!verification.ok) return verification.response
 
           await env.DB.prepare(

@@ -57,13 +57,14 @@ describe('FamilyHeadDashboard', () => {
     expect(screen.getByText(/\*\*\*\*222/)).toBeInTheDocument()
   })
 
-  it('shows phone-verification-unavailable banner when phone auth is disabled', () => {
+  it('directs payout-edit requests to support email (self-service editing on roadmap)', () => {
     render(
       <MemoryRouter>
         <FamilyHeadDashboard memorial={MEMORIAL} />
       </MemoryRouter>
     )
-    expect(screen.getByText(/temporarily unavailable/i)).toBeInTheDocument()
+    expect(screen.getByText(/support@funeralpress\.org/i)).toBeInTheDocument()
+    expect(screen.getByText(/self-service editing.*roadmap/i)).toBeInTheDocument()
   })
 
   it('shows pending-approval pill when approval_status is pending', () => {

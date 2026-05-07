@@ -168,16 +168,17 @@ describe('POST /memorials/:id/donation/init — self-declared mode', () => {
   })
 })
 
-describe('POST /memorials/:id/donation/init — invite mode', () => {
+describe('POST /memorials/:id/donation/init — invite mode (email delivery)', () => {
   beforeEach(() => {
+    // Default chain: bank/resolve OK → subaccount create OK → Resend OK
     global.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ status: true, data: { account_name: 'AKOSUA' } }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ status: true, data: { subaccount_code: 'ACCT_xyz' } }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ code: 'ok', message_id: 'm1' }) })  // Termii SMS
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ id: 'em_1' }) })  // Resend
   })
 
-  it('sends SMS invite and returns pending status', async () => {
-    const env = mockEnv()
+  it('sends Resend email invite and returns pending status with email as invite_sent_to', async () => {
+    const env = mockEnv({ RESEND_API_KEY: 'rs_test_fake' })
     await env.MEMORIAL_PAGES_KV.put('mem_abc', JSON.stringify({
       slug: 'akua-mensah', creator_user_id: 42, deceased_name: 'Akua Mensah',
     }))
@@ -187,16 +188,24 @@ describe('POST /memorials/:id/donation/init — invite mode', () => {
       payout_momo_provider: 'mtn',
       payout_account_name: 'Akosua Mensah',
       wall_mode: 'full',
-      family_head: { mode: 'invite', phone: '+233207777777', name: 'Akosua' },
+      family_head: {
+        mode: 'invite',
+        phone: '+233207777777',
+        email: 'akosua@example.com',
+        name: 'Akosua',
+      },
     }, jwt), env)
 
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.approval_status).toBe('pending')
-    expect(body.invite_sent_to).toContain('+233')
-    // Termii fetch was called
+    expect(body.invite_sent_to).toBe('akosua@example.com')
+    expect(body.invite_phone).toBe('+233207777777')
+    // Resend was called and Termii was NOT
+    const resendCalled = global.fetch.mock.calls.some(c => String(c[0]).includes('resend.com'))
+    expect(resendCalled).toBe(true)
     const termiiCalled = global.fetch.mock.calls.some(c => String(c[0]).includes('termii'))
-    expect(termiiCalled).toBe(true)
+    expect(termiiCalled).toBe(false)
   })
 
   it('rejects invite mode without family_head.phone', async () => {
@@ -208,7 +217,35 @@ describe('POST /memorials/:id/donation/init — invite mode', () => {
       payout_momo_provider: 'mtn',
       payout_account_name: 'X',
       wall_mode: 'full',
-      family_head: { mode: 'invite' },
+      family_head: { mode: 'invite', email: 'x@y.com', name: 'X' },
+    }, jwt), env)
+    expect(res.status).toBe(400)
+  })
+
+  it('rejects invite mode without family_head.email (the invite delivery channel)', async () => {
+    const env = mockEnv()
+    await env.MEMORIAL_PAGES_KV.put('mem_abc', JSON.stringify({ slug: 'a', creator_user_id: 42 }))
+    const jwt = await makeJwt(env)
+    const res = await worker.fetch(await makeReq('mem_abc', {
+      payout_momo_number: '+233244111222',
+      payout_momo_provider: 'mtn',
+      payout_account_name: 'X',
+      wall_mode: 'full',
+      family_head: { mode: 'invite', phone: '+233207777777', name: 'X' },
+    }, jwt), env)
+    expect(res.status).toBe(400)
+  })
+
+  it('rejects invite mode with malformed email', async () => {
+    const env = mockEnv()
+    await env.MEMORIAL_PAGES_KV.put('mem_abc', JSON.stringify({ slug: 'a', creator_user_id: 42 }))
+    const jwt = await makeJwt(env)
+    const res = await worker.fetch(await makeReq('mem_abc', {
+      payout_momo_number: '+233244111222',
+      payout_momo_provider: 'mtn',
+      payout_account_name: 'X',
+      wall_mode: 'full',
+      family_head: { mode: 'invite', phone: '+233207777777', email: 'not-an-email', name: 'X' },
     }, jwt), env)
     expect(res.status).toBe(400)
   })
