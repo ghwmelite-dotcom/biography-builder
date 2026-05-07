@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, fireEvent, screen, waitFor } from '@testing-library/react'
-import { FamilyHeadApprovalView } from '../FamilyHeadApprovalView.jsx'
 
 const MEMORIAL = {
   id: 'mem_abc',
@@ -19,113 +18,82 @@ const MEMORIAL = {
 }
 
 afterEach(() => {
-  vi.unstubAllEnvs()
   vi.resetModules()
+  vi.restoreAllMocks()
 })
 
-describe('FamilyHeadApprovalView (default — phone auth disabled)', () => {
-  it('renders memorial details', () => {
-    render(<FamilyHeadApprovalView memorial={MEMORIAL} token="tok_xyz" />)
-    expect(screen.getByText(/Akosua Mensah/)).toBeInTheDocument()
+describe('FamilyHeadApprovalView (post-OTP-removal — token is the gate)', () => {
+  it('renders memorial details and decision buttons immediately (no OTP step)', async () => {
+    const { FamilyHeadApprovalView: View } = await import('../FamilyHeadApprovalView.jsx')
+    render(<View memorial={MEMORIAL} token="tok_xyz" />)
     expect(screen.getByText('Akua Mensah')).toBeInTheDocument()
-    expect(screen.getByText(/1948/)).toBeInTheDocument()
-  })
-
-  it('renders donation summary (provider, account, wall mode)', () => {
-    render(<FamilyHeadApprovalView memorial={MEMORIAL} token="tok_xyz" />)
     expect(screen.getByText(/MTN MoMo/i)).toBeInTheDocument()
-    expect(screen.getByText(/Akosua Mensah/)).toBeInTheDocument()
-    expect(screen.getByText(/wall mode: full/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^approve$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^reject$/i })).toBeInTheDocument()
+    // OTP UI is gone
+    expect(screen.queryByText(/SMS code/i)).toBeNull()
+    expect(screen.queryByText(/code sent to/i)).toBeNull()
   })
 
-  it('shows the unavailable message when VITE_PHONE_AUTH_ENABLED is unset', () => {
-    render(<FamilyHeadApprovalView memorial={MEMORIAL} token="tok_xyz" />)
-    expect(screen.getByText(/phone verification.*unavailable/i)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /verify with sms code/i })).toBeNull()
-  })
-})
-
-describe('FamilyHeadApprovalView with VITE_PHONE_AUTH_ENABLED=true', () => {
-  beforeEach(() => {
-    vi.stubEnv('VITE_PHONE_AUTH_ENABLED', 'true')
-    vi.resetModules()
-  })
-
-  it('shows Verify with SMS code button initially', async () => {
-    const { FamilyHeadApprovalView: View } = await import('../FamilyHeadApprovalView.jsx')
-    render(<View memorial={MEMORIAL} token="tok_xyz" />)
-    expect(screen.getByRole('button', { name: /verify with sms code/i })).toBeInTheDocument()
-  })
-
-  it('moves to OTP stage after clicking Verify', async () => {
+  it('approves with token + phone (no otp_code)', async () => {
+    const approve = vi.fn().mockResolvedValue({ ok: true })
     vi.doMock('../../../utils/donationApi.js', () => ({
-      phoneAuthApi: {
-        sendOtp: vi.fn().mockResolvedValue({ ok: true }),
-        verify: vi.fn(),
-      },
-      donationApi: { approve: vi.fn(), reject: vi.fn() },
+      donationApi: { approve, reject: vi.fn() },
     }))
     const { FamilyHeadApprovalView: View } = await import('../FamilyHeadApprovalView.jsx')
     render(<View memorial={MEMORIAL} token="tok_xyz" />)
-    fireEvent.click(screen.getByRole('button', { name: /verify with sms code/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^approve$/i }))
     await waitFor(() => {
-      expect(screen.getByText(/Code sent to/i)).toBeInTheDocument()
+      expect(approve).toHaveBeenCalledWith('mem_abc', {
+        token: 'tok_xyz',
+        phone: '+233244111222',
+      })
+      expect(screen.getByText(/^✓ Approved$/)).toBeInTheDocument()
     })
   })
 
-  it('shows decision buttons after OTP verification', async () => {
+  it('rejects with token + phone + reason (no otp_code)', async () => {
+    const reject = vi.fn().mockResolvedValue({ ok: true })
     vi.doMock('../../../utils/donationApi.js', () => ({
-      phoneAuthApi: {
-        sendOtp: vi.fn().mockResolvedValue({ ok: true }),
-        verify: vi.fn().mockResolvedValue({ ok: true }),
-      },
-      donationApi: { approve: vi.fn(), reject: vi.fn() },
+      donationApi: { approve: vi.fn(), reject },
     }))
     const { FamilyHeadApprovalView: View } = await import('../FamilyHeadApprovalView.jsx')
     render(<View memorial={MEMORIAL} token="tok_xyz" />)
-    fireEvent.click(screen.getByRole('button', { name: /verify with sms code/i }))
-    await waitFor(() => screen.getByText(/Code sent to/i))
-
-    // Type 6 digits — set value via the OtpCodeInput's onChange (simulated by focusing
-    // first input and typing). Easier: manipulate the underlying state by calling
-    // each input directly.
-    const inputs = screen.getAllByLabelText(/Digit \d/)
-    for (let i = 0; i < 6; i++) {
-      fireEvent.change(inputs[i], { target: { value: String(i + 1) } })
-    }
-
-    fireEvent.click(screen.getByRole('button', { name: /^verify$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^reject$/i }))
+    fireEvent.change(screen.getByPlaceholderText(/reason/i), {
+      target: { value: 'Not the right family head' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /confirm reject/i }))
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /approve/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /^reject$/i })).toBeInTheDocument()
+      expect(reject).toHaveBeenCalledWith('mem_abc', {
+        token: 'tok_xyz',
+        phone: '+233244111222',
+        reason: 'Not the right family head',
+      })
+      expect(screen.getByText(/^✗ Rejected$/)).toBeInTheDocument()
     })
   })
 
-  it('shows approval success in done stage', async () => {
+  it('surfaces backend error message when approve fails', async () => {
+    const approve = vi.fn().mockRejectedValue(new Error('Approval link expired'))
     vi.doMock('../../../utils/donationApi.js', () => ({
-      phoneAuthApi: {
-        sendOtp: vi.fn().mockResolvedValue({ ok: true }),
-        verify: vi.fn().mockResolvedValue({ ok: true }),
-      },
-      donationApi: {
-        approve: vi.fn().mockResolvedValue({ ok: true }),
-        reject: vi.fn(),
-      },
+      donationApi: { approve, reject: vi.fn() },
     }))
     const { FamilyHeadApprovalView: View } = await import('../FamilyHeadApprovalView.jsx')
     render(<View memorial={MEMORIAL} token="tok_xyz" />)
-
-    fireEvent.click(screen.getByRole('button', { name: /verify with sms code/i }))
-    await waitFor(() => screen.getByText(/Code sent to/i))
-    const inputs = screen.getAllByLabelText(/Digit \d/)
-    for (let i = 0; i < 6; i++) {
-      fireEvent.change(inputs[i], { target: { value: String(i + 1) } })
-    }
-    fireEvent.click(screen.getByRole('button', { name: /^verify$/i }))
-    await waitFor(() => screen.getByRole('button', { name: /approve/i }))
-    fireEvent.click(screen.getByRole('button', { name: /approve/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^approve$/i }))
     await waitFor(() => {
-      expect(screen.getByText(/approved/i)).toBeInTheDocument()
+      expect(screen.getByText(/approval link expired/i)).toBeInTheDocument()
     })
+  })
+
+  it('Cancel from rejecting stage returns to decision', async () => {
+    const { FamilyHeadApprovalView: View } = await import('../FamilyHeadApprovalView.jsx')
+    render(<View memorial={MEMORIAL} token="tok_xyz" />)
+    fireEvent.click(screen.getByRole('button', { name: /^reject$/i }))
+    expect(screen.getByPlaceholderText(/reason/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
+    expect(screen.queryByPlaceholderText(/reason/i)).toBeNull()
+    expect(screen.getByRole('button', { name: /^approve$/i })).toBeInTheDocument()
   })
 })

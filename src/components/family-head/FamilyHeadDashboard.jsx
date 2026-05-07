@@ -5,8 +5,6 @@ import { DonorWall } from '../donation/DonorWall.jsx'
 import { useDonationStore } from '../../stores/donationStore.js'
 import { formatMinor } from '../../utils/currency.js'
 
-const PHONE_AUTH_ENABLED = import.meta.env.VITE_PHONE_AUTH_ENABLED === 'true'
-
 export function FamilyHeadDashboard({ memorial }) {
   const loadWall = useDonationStore((s) => s.loadWall)
   const walls = useDonationStore((s) => s.walls)
@@ -32,7 +30,7 @@ export function FamilyHeadDashboard({ memorial }) {
         )}
         {memorial.donation?.approval_status === 'pending' && (
           <div className="mt-3 inline-flex items-center gap-2 text-xs bg-amber-500/10 text-amber-700 px-3 py-1 rounded-full">
-            ⏳ Awaiting your approval — check the SMS link sent to you
+            ⏳ Awaiting your approval — check the email link sent to you
           </div>
         )}
       </header>
@@ -79,23 +77,13 @@ export function FamilyHeadDashboard({ memorial }) {
           <br />
           Account: {memorial.donation?.payout_account_name}
         </p>
-        {!PHONE_AUTH_ENABLED ? (
-          <div className="text-sm bg-amber-500/10 text-amber-700 rounded p-3">
-            ⚠ Changing payout details requires phone verification by SMS, which is
-            temporarily unavailable. To update your payout MoMo, contact{' '}
-            <a className="underline" href="mailto:support@funeralpress.org">
-              support@funeralpress.org
-            </a>
-            .
-          </div>
-        ) : (
-          <button
-            disabled
-            className="px-6 py-2 border border-border rounded-lg text-muted-foreground cursor-not-allowed"
-          >
-            Update payout details (coming soon)
-          </button>
-        )}
+        <div className="text-sm bg-muted text-muted-foreground rounded p-3">
+          To update your payout MoMo, contact{' '}
+          <a className="underline" href="mailto:support@funeralpress.org">
+            support@funeralpress.org
+          </a>
+          . Self-service editing is on the roadmap.
+        </div>
       </section>
 
       {/* Recent donations */}

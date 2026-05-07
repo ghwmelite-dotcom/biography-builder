@@ -191,14 +191,14 @@ function rejectReq(body) {
 describe('POST /memorials/:id/donation/approve', () => {
   beforeEach(() => { global.fetch = vi.fn() })
 
-  it('succeeds with valid token + verified OTP, flips KV to approved+enabled', async () => {
+  it('succeeds with valid token alone (no OTP), flips KV to approved+enabled', async () => {
     const ctx = await setupApprovalCtx()
     const env = makeEnv({
       memorial: ctx.memorial,
       otp: ctx.otp,
       kvSeed: { slug: 'a', deceased_name: 'Akua', donation: { enabled: false, approval_status: 'pending' } },
     })
-    const res = await worker.fetch(approveReq({ token: ctx.token, otp_code: ctx.code, phone: PHONE }), env)
+    const res = await worker.fetch(approveReq({ token: ctx.token, phone: PHONE }), env)
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.approval_status).toBe('approved')
@@ -216,7 +216,7 @@ describe('POST /memorials/:id/donation/approve', () => {
   it('creates a user when phone is not yet in users table', async () => {
     const ctx = await setupApprovalCtx()
     const env = makeEnv({ memorial: ctx.memorial, otp: ctx.otp, user: null })
-    const res = await worker.fetch(approveReq({ token: ctx.token, otp_code: ctx.code, phone: PHONE }), env)
+    const res = await worker.fetch(approveReq({ token: ctx.token, phone: PHONE }), env)
     expect(res.status).toBe(200)
     expect(env.DB._state.inserts.some(i => i.table === 'users')).toBe(true)
     expect(env.DB._state.user.phone_e164).toBe(PHONE)
@@ -226,7 +226,7 @@ describe('POST /memorials/:id/donation/approve', () => {
     const ctx = await setupApprovalCtx()
     const existingUser = { id: 7, phone_e164: PHONE }
     const env = makeEnv({ memorial: ctx.memorial, otp: ctx.otp, user: existingUser })
-    const res = await worker.fetch(approveReq({ token: ctx.token, otp_code: ctx.code, phone: PHONE }), env)
+    const res = await worker.fetch(approveReq({ token: ctx.token, phone: PHONE }), env)
     expect(res.status).toBe(200)
     expect(env.DB._state.inserts.some(i => i.table === 'users')).toBe(false)
     expect(env.DB._state.memorial.family_head_user_id).toBe(7)
@@ -235,7 +235,7 @@ describe('POST /memorials/:id/donation/approve', () => {
   it('rejects when token + body phone mismatch', async () => {
     const ctx = await setupApprovalCtx()
     const env = makeEnv({ memorial: ctx.memorial, otp: ctx.otp })
-    const res = await worker.fetch(approveReq({ token: ctx.token, otp_code: ctx.code, phone: '+233200000000' }), env)
+    const res = await worker.fetch(approveReq({ token: ctx.token, phone: '+233200000000' }), env)
     expect(res.status).toBe(401)
   })
 
@@ -243,25 +243,17 @@ describe('POST /memorials/:id/donation/approve', () => {
     const ctx = await setupApprovalCtx()
     const consumed = { ...ctx.memorial, approval_status: 'approved', approval_token_hash: null }
     const env = makeEnv({ memorial: consumed, otp: ctx.otp })
-    const res = await worker.fetch(approveReq({ token: ctx.token, otp_code: ctx.code, phone: PHONE }), env)
+    const res = await worker.fetch(approveReq({ token: ctx.token, phone: PHONE }), env)
     expect(res.status).toBe(401)
   })
 
-  it('rejects wrong OTP code', async () => {
-    const ctx = await setupApprovalCtx()
-    const env = makeEnv({ memorial: ctx.memorial, otp: ctx.otp })
-    const res = await worker.fetch(approveReq({ token: ctx.token, otp_code: '999999', phone: PHONE }), env)
-    expect(res.status).toBe(401)
+  it('rejects with 400 when token is missing', async () => {
+    const env = makeEnv({ memorial: null, otp: null })
+    const res = await worker.fetch(approveReq({ phone: PHONE }), env)
+    expect(res.status).toBe(400)
   })
 
-  it('rejects when no OTP row pending for that phone', async () => {
-    const ctx = await setupApprovalCtx()
-    const env = makeEnv({ memorial: ctx.memorial, otp: null })
-    const res = await worker.fetch(approveReq({ token: ctx.token, otp_code: ctx.code, phone: PHONE }), env)
-    expect(res.status).toBe(401)
-  })
-
-  it('rejects with 400 on missing fields', async () => {
+  it('rejects with 400 when phone is missing', async () => {
     const env = makeEnv({ memorial: null, otp: null })
     const res = await worker.fetch(approveReq({ token: 'x' }), env)
     expect(res.status).toBe(400)
@@ -271,14 +263,14 @@ describe('POST /memorials/:id/donation/approve', () => {
 describe('POST /memorials/:id/donation/reject', () => {
   beforeEach(() => { global.fetch = vi.fn() })
 
-  it('flips memorial to rejected with reason and updates KV', async () => {
+  it('flips memorial to rejected with reason and updates KV (no OTP)', async () => {
     const ctx = await setupApprovalCtx()
     const env = makeEnv({
       memorial: ctx.memorial, otp: ctx.otp,
       kvSeed: { slug: 'a', donation: { enabled: false, approval_status: 'pending' } },
     })
     const res = await worker.fetch(
-      rejectReq({ token: ctx.token, otp_code: ctx.code, phone: PHONE, reason: 'Not the family head' }),
+      rejectReq({ token: ctx.token, phone: PHONE, reason: 'Not the family head' }),
       env
     )
     expect(res.status).toBe(200)
@@ -295,7 +287,7 @@ describe('POST /memorials/:id/donation/reject', () => {
     const ctx = await setupApprovalCtx()
     const env = makeEnv({ memorial: ctx.memorial, otp: ctx.otp })
     const res = await worker.fetch(
-      rejectReq({ token: ctx.token, otp_code: ctx.code, phone: PHONE, reason: 'x'.repeat(501) }),
+      rejectReq({ token: ctx.token, phone: PHONE, reason: 'x'.repeat(501) }),
       env
     )
     expect(res.status).toBe(400)

@@ -1,43 +1,18 @@
 import { useState } from 'react'
-import { OtpCodeInput } from '../auth/OtpCodeInput.jsx'
-import { phoneAuthApi, donationApi } from '../../utils/donationApi.js'
+import { donationApi } from '../../utils/donationApi.js'
 import { formatMinor } from '../../utils/currency.js'
 
-const PHONE_AUTH_ENABLED = import.meta.env.VITE_PHONE_AUTH_ENABLED === 'true'
-
+// Family-head approval flow. The approval link in the invite email carries a
+// signed JWT bound to phone + memorial_id with a 24h TTL — possessing the
+// link is sufficient identity proof, so there is no second-factor step.
+// (The OTP-via-SMS step that lived here was deprecated 2026-05-07 along with
+// the rest of the SMS infrastructure.)
 export function FamilyHeadApprovalView({ memorial, token }) {
-  const [stage, setStage] = useState('details') // details | otp | decision | rejecting | done
-  const [code, setCode] = useState('')
+  const [stage, setStage] = useState('decision') // decision | rejecting | done
   const [error, setError] = useState(null)
   const [reason, setReason] = useState('')
   const [outcome, setOutcome] = useState(null)
   const [busy, setBusy] = useState(false)
-
-  const sendOtp = async () => {
-    setError(null)
-    setBusy(true)
-    try {
-      await phoneAuthApi.sendOtp(memorial.family_head_phone, 'family_head_approval')
-      setStage('otp')
-    } catch (e) {
-      setError(e.message || 'Failed to send code')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const verifyOtp = async () => {
-    setError(null)
-    setBusy(true)
-    try {
-      await phoneAuthApi.verify(memorial.family_head_phone, code, 'family_head_approval')
-      setStage('decision')
-    } catch (e) {
-      setError(e.message || 'Wrong code')
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const approve = async () => {
     setError(null)
@@ -45,7 +20,6 @@ export function FamilyHeadApprovalView({ memorial, token }) {
     try {
       await donationApi.approve(memorial.id, {
         token,
-        otp_code: code,
         phone: memorial.family_head_phone,
       })
       setOutcome('approved')
@@ -63,7 +37,6 @@ export function FamilyHeadApprovalView({ memorial, token }) {
     try {
       await donationApi.reject(memorial.id, {
         token,
-        otp_code: code,
         phone: memorial.family_head_phone,
         reason,
       })
@@ -96,37 +69,7 @@ export function FamilyHeadApprovalView({ memorial, token }) {
         <p>✓ Wall mode: {memorial.donation?.wall_mode}</p>
       </div>
 
-      {!PHONE_AUTH_ENABLED && (
-        <div className="border border-border rounded-lg p-4 text-center text-muted-foreground">
-          Phone verification is temporarily unavailable. Please try again later.
-        </div>
-      )}
-
-      {PHONE_AUTH_ENABLED && stage === 'details' && (
-        <button
-          onClick={sendOtp}
-          disabled={busy}
-          className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium disabled:opacity-50 hover:bg-primary/90 transition-colors"
-        >
-          {busy ? 'Sending…' : 'Verify with SMS code'}
-        </button>
-      )}
-
-      {PHONE_AUTH_ENABLED && stage === 'otp' && (
-        <>
-          <p className="text-muted-foreground text-sm">Code sent to {memorial.family_head_phone}</p>
-          <OtpCodeInput value={code} onChange={setCode} />
-          <button
-            onClick={verifyOtp}
-            disabled={code.length < 6 || busy}
-            className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium disabled:opacity-50 hover:bg-primary/90 transition-colors"
-          >
-            {busy ? 'Verifying…' : 'Verify'}
-          </button>
-        </>
-      )}
-
-      {PHONE_AUTH_ENABLED && stage === 'decision' && (
+      {stage === 'decision' && (
         <div className="flex gap-3">
           <button
             onClick={() => setStage('rejecting')}
@@ -145,7 +88,7 @@ export function FamilyHeadApprovalView({ memorial, token }) {
         </div>
       )}
 
-      {PHONE_AUTH_ENABLED && stage === 'rejecting' && (
+      {stage === 'rejecting' && (
         <>
           <textarea
             value={reason}
