@@ -3,15 +3,15 @@ import { render, fireEvent } from '@testing-library/react'
 import { PinInput } from '../PinInput'
 
 describe('PinInput', () => {
-  it('renders 6 password boxes by default', () => {
+  it('renders 4 password boxes by default', () => {
     const { container } = render(<PinInput value="" onChange={() => {}} />)
     const inputs = container.querySelectorAll('input[type="password"]')
-    expect(inputs).toHaveLength(6)
+    expect(inputs).toHaveLength(4)
   })
 
   it('respects the length prop', () => {
-    const { container } = render(<PinInput value="" onChange={() => {}} length={4} />)
-    expect(container.querySelectorAll('input[type="password"]')).toHaveLength(4)
+    const { container } = render(<PinInput value="" onChange={() => {}} length={6} />)
+    expect(container.querySelectorAll('input[type="password"]')).toHaveLength(6)
   })
 
   it('uses ariaLabel for each digit', () => {
@@ -19,7 +19,7 @@ describe('PinInput', () => {
       <PinInput value="" onChange={() => {}} ariaLabel="New PIN" />,
     )
     expect(getByLabelText('New PIN digit 1')).toBeTruthy()
-    expect(getByLabelText('New PIN digit 6')).toBeTruthy()
+    expect(getByLabelText('New PIN digit 4')).toBeTruthy()
   })
 
   it('calls onChange with concatenated digits as user types', () => {
@@ -42,9 +42,9 @@ describe('PinInput', () => {
     const { container } = render(<PinInput value="" onChange={onChange} />)
     const wrapper = container.firstChild
     const pasteEvent = new Event('paste', { bubbles: true, cancelable: true })
-    pasteEvent.clipboardData = { getData: () => '654321' }
+    pasteEvent.clipboardData = { getData: () => '4321' }
     fireEvent(wrapper, pasteEvent)
-    expect(onChange).toHaveBeenCalledWith('654321')
+    expect(onChange).toHaveBeenCalledWith('4321')
   })
 
   it('disables inputs when disabled prop is true', () => {

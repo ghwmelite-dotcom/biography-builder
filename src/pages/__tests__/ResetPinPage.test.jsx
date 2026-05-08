@@ -57,8 +57,8 @@ describe('ResetPinPage', () => {
 
   it('shows mismatch error when PINs differ', async () => {
     const { getByLabelText, getByText, findByText } = renderWith('?token=abc')
-    fillPin(getByLabelText, 'New PIN', '111111')
-    fillPin(getByLabelText, 'Confirm new PIN', '222222')
+    fillPin(getByLabelText, 'New PIN', '1111')
+    fillPin(getByLabelText, 'Confirm new PIN', '2222')
     fireEvent.click(getByText('Reset PIN'))
     expect(await findByText('PINs do not match')).toBeTruthy()
     expect(phonePinApi.reset).not.toHaveBeenCalled()
@@ -67,11 +67,11 @@ describe('ResetPinPage', () => {
   it('calls api and navigates to home on success', async () => {
     phonePinApi.reset.mockResolvedValueOnce({ message: 'ok' })
     const { getByLabelText, getByText } = renderWith('?token=abc')
-    fillPin(getByLabelText, 'New PIN', '111111')
-    fillPin(getByLabelText, 'Confirm new PIN', '111111')
+    fillPin(getByLabelText, 'New PIN', '1111')
+    fillPin(getByLabelText, 'Confirm new PIN', '1111')
     fireEvent.click(getByText('Reset PIN'))
     await waitFor(() =>
-      expect(phonePinApi.reset).toHaveBeenCalledWith({ token: 'abc', new_pin: '111111' }),
+      expect(phonePinApi.reset).toHaveBeenCalledWith({ token: 'abc', new_pin: '1111' }),
     )
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/', { replace: true }))
     expect(notifyMock).toHaveBeenCalled()
@@ -82,8 +82,8 @@ describe('ResetPinPage', () => {
     err.status = 401
     phonePinApi.reset.mockRejectedValueOnce(err)
     const { getByLabelText, getByText, findByText } = renderWith('?token=abc')
-    fillPin(getByLabelText, 'New PIN', '111111')
-    fillPin(getByLabelText, 'Confirm new PIN', '111111')
+    fillPin(getByLabelText, 'New PIN', '1111')
+    fillPin(getByLabelText, 'Confirm new PIN', '1111')
     fireEvent.click(getByText('Reset PIN'))
     expect(await findByText(/expired or is invalid/i)).toBeTruthy()
   })

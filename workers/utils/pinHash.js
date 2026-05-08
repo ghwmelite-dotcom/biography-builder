@@ -18,7 +18,9 @@ const KEY_LEN_BITS = 256
 const SALT_BYTES = 16
 const DEFAULT_ITERATIONS = 600000
 
-const PIN_REGEX = /^[0-9]{6}$/
+// 4-digit PIN to match MTN MoMo / Vodafone Cash UX in Ghana. Brute-force
+// resistance comes from the 5-attempt lockout, not from PIN entropy.
+const PIN_REGEX = /^[0-9]{4}$/
 
 export function isValidPinFormat(pin) {
   return typeof pin === 'string' && PIN_REGEX.test(pin)

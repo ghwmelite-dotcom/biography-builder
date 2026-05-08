@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { PinInput } from '../auth/PinInput.jsx'
 import { phonePinApi } from '../../utils/phonePinApi.js'
 
-const PIN_LENGTH = 6
+const PIN_LENGTH = 4
 
 export default function ChangePinSection() {
   const [currentPin, setCurrentPin] = useState('')
@@ -26,7 +26,7 @@ export default function ChangePinSection() {
     if (loading) return
     if (newPin !== confirmNew) { setError('New PINs do not match'); return }
     if (newPin === currentPin) { setError('New PIN must differ from current PIN'); return }
-    if (!/^\d{6}$/.test(newPin)) { setError('PIN must be 6 digits'); return }
+    if (!/^\d{4}$/.test(newPin)) { setError('PIN must be 4 digits'); return }
     setLoading(true); setError(null)
     try {
       await phonePinApi.changePin({ current_pin: currentPin, new_pin: newPin })

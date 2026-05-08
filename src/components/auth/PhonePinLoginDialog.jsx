@@ -5,7 +5,7 @@ import { PinInput } from './PinInput.jsx'
 import { phonePinApi } from '../../utils/phonePinApi.js'
 import { useAuthStore } from '../../stores/authStore.js'
 
-const PIN_LENGTH = 6
+const PIN_LENGTH = 4
 
 export function PhonePinLoginDialog({
   open,
@@ -70,7 +70,7 @@ export function PhonePinLoginDialog({
               Sign in with phone
             </Dialog.Title>
             <Dialog.Description className="text-muted-foreground text-sm mb-4">
-              Enter your phone number and 6-digit PIN.
+              Enter your phone number and 4-digit PIN.
             </Dialog.Description>
 
             <div className="space-y-3">
