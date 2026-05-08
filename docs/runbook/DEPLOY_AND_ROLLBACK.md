@@ -306,7 +306,7 @@ The `CLOUDFLARE_API_TOKEN` repo secret authenticates every `wrangler-action` ste
 
 1. **No staging environment.** All deploys go straight to production. Recommended: `[env.staging]` blocks + a `staging-db` D1 instance + branch-based deploys for `staging` branch.
 2. **No migration tracking.** Operator is responsible for knowing applied state. Recommended: `schema_migrations` table + CI assertion.
-3. **No automated post-deploy smoke tests.** Health checks and synthetic user-flow probes should run after `deploy-workers` succeeds. Recommended: `playwright` smoke job appended to `deploy.yml`.
-4. **No deploy notification.** Slack/Discord webhook to announce deploys would shorten "is this related to a deploy?" investigations.
+3. ~~No automated post-deploy smoke tests~~ — **fixed** 2026-05-08. The `smoke` job in `deploy.yml` runs after `deploy-frontend` + `deploy-workers` and probes each worker `/health`, the SPA root, and a bad-creds login (expects 401/429). Failure surfaces in the Actions tab + the Slack notify job; it does NOT roll back.
+4. ~~No deploy notification~~ — **fixed** 2026-05-08. The `notify-deploy` job posts a Slack message on every push-to-main with the commit short-SHA, first line of the message, the actor, and the run URL. Reuses the same `SLACK_WEBHOOK_URL` repo secret as `healthcheck.yml`. No-op when the secret is unset.
 5. ~~`wrangler.toml` at the workers root duplicates brochure-ai-writer config~~ — **fixed** in commit `bf634d7` (2026-05-06).
 6. **Account ID is hardcoded in `deploy.yml`** (`ea2eb3a9813660dfca2a60e594858538`). Acceptable, but means anyone running deploys locally must use the same account; document this.
