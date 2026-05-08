@@ -16,7 +16,7 @@ import { useRef, useEffect } from 'react'
 export function PinInput({
   value = '',
   onChange,
-  length = 6,
+  length = 4,
   autoFocus = false,
   disabled = false,
   ariaLabel = 'PIN',

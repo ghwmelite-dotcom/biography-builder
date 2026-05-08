@@ -4,7 +4,7 @@ import { PinInput } from '../components/auth/PinInput.jsx'
 import { phonePinApi } from '../utils/phonePinApi.js'
 import { useNotification } from '../components/ui/notification.jsx'
 
-const PIN_LENGTH = 6
+const PIN_LENGTH = 4
 
 export default function ResetPinPage() {
   const [params] = useSearchParams()
@@ -25,7 +25,7 @@ export default function ResetPinPage() {
     e.preventDefault()
     if (loading) return
     if (pin !== confirmPin) { setError('PINs do not match'); return }
-    if (!/^\d{6}$/.test(pin)) { setError('PIN must be 6 digits'); return }
+    if (!/^\d{4}$/.test(pin)) { setError('PIN must be 4 digits'); return }
     setLoading(true); setError(null)
     try {
       await phonePinApi.reset({ token, new_pin: pin })
@@ -35,7 +35,7 @@ export default function ResetPinPage() {
       if (err.status === 401) {
         setError('This reset link has expired or is invalid.')
       } else if (err.status === 400) {
-        setError(err.message || 'PIN must be 6 digits.')
+        setError(err.message || 'PIN must be 4 digits.')
       } else {
         setError(err.message || 'Reset failed. Please try again.')
       }
@@ -51,7 +51,7 @@ export default function ResetPinPage() {
       <div className="w-full max-w-md bg-card border border-border rounded-2xl p-6 shadow-sm">
         <h1 className="text-2xl font-semibold text-foreground mb-1">Reset your PIN</h1>
         <p className="text-muted-foreground text-sm mb-6">
-          Pick a new 6-digit PIN. You&apos;ll use it to sign in next time.
+          Pick a new 4-digit PIN. You&apos;ll use it to sign in next time.
         </p>
 
         {!token || error === 'Reset link is missing or invalid.' || error === 'This reset link has expired or is invalid.' ? (

@@ -34,7 +34,7 @@
 2. Form fields:
      - phone (E.164, normalized server-side)
      - email (must be unique across users)
-     - PIN (6 digits, numeric only)
+     - PIN (4 digits, numeric only — revised 2026-05-08 to match MTN MoMo / Vodafone Cash UX in Ghana)
      - confirm PIN
      - name
 3. POST /auth/phone/signup
@@ -223,7 +223,7 @@ PBKDF2 (not Argon2/scrypt) chosen because Web Crypto exposes it natively in Work
 | `ChangePinSection` | account settings page | Three-PIN form (current, new, confirm) |
 | `EmailVerificationBanner` | top of authed pages | Shows when `user.email_verified_at == null`. Has "Resend verification email" button |
 | `SignInChooser` (update) | existing | Add a "Continue with phone" tile beside Google. Drop the `VITE_PHONE_AUTH_ENABLED` flag |
-| `PinInput` | shared | 6-digit input matching the existing OtpCodeInput style for visual consistency |
+| `PinInput` | shared | 4-digit input matching the existing OtpCodeInput style for visual consistency |
 
 ---
 
@@ -266,7 +266,7 @@ PBKDF2 (not Argon2/scrypt) chosen because Web Crypto exposes it natively in Work
 
 ## 11. Open questions (need user input before coding)
 
-1. **PIN length** — 6 digits exact, or allow 4-6? (My pick: **6 exact**. Industry standard, brute-force-resistant, matches MoMo.)
+1. **PIN length** — ~~6 digits exact~~ → **revised 2026-05-08 to 4 digits exact** to match MTN MoMo / Vodafone Cash. Brute-force resistance comes from the 5-attempt lockout, not from PIN entropy.
 2. **Country allowlist** — Ghana only (+233), or open E.164? (My pick: **open E.164**, since Ghanaians abroad and family members in diaspora exist.)
 3. **Email verification gate** — block login until verified, or just gate PIN reset? (My pick: **gate PIN reset only**. Login works pre-verification with a banner. Less friction, security risk is bounded because PIN reset requires email anyway.)
 4. **Lockout duration** — 1h auto-unlock, 24h, or admin-only unlock? (My pick: **1h auto-unlock**. Real users forget PINs.)

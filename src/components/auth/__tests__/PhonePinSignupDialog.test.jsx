@@ -59,8 +59,8 @@ describe('PhonePinSignupDialog', () => {
     fireEvent.change(getByLabelText('Full name'), { target: { value: 'Ama' } })
     fireEvent.change(getByLabelText('Email'), { target: { value: 'ama@test.com' } })
     fireEvent.change(getByLabelText('Phone number'), { target: { value: '241234567' } })
-    fillPin(getByLabelText, 'PIN', '111111')
-    fillPin(getByLabelText, 'Confirm PIN', '222222')
+    fillPin(getByLabelText, 'PIN', '1111')
+    fillPin(getByLabelText, 'Confirm PIN', '2222')
 
     fireEvent.click(getByText('Create account'))
     expect(await findByText('PINs do not match')).toBeTruthy()
@@ -76,8 +76,8 @@ describe('PhonePinSignupDialog', () => {
     fireEvent.change(getByLabelText('Full name'), { target: { value: 'Ama' } })
     fireEvent.change(getByLabelText('Email'), { target: { value: 'ama@test.com' } })
     fireEvent.change(getByLabelText('Phone number'), { target: { value: '241234567' } })
-    fillPin(getByLabelText, 'PIN', '111111')
-    fillPin(getByLabelText, 'Confirm PIN', '111111')
+    fillPin(getByLabelText, 'PIN', '1111')
+    fillPin(getByLabelText, 'Confirm PIN', '1111')
 
     fireEvent.click(getByText('Create account'))
     await waitFor(() => expect(phonePinApi.signup).toHaveBeenCalled())
@@ -94,8 +94,8 @@ describe('PhonePinSignupDialog', () => {
     fireEvent.change(getByLabelText('Full name'), { target: { value: 'Ama' } })
     fireEvent.change(getByLabelText('Email'), { target: { value: 'ama@test.com' } })
     fireEvent.change(getByLabelText('Phone number'), { target: { value: '241234567' } })
-    fillPin(getByLabelText, 'PIN', '111111')
-    fillPin(getByLabelText, 'Confirm PIN', '111111')
+    fillPin(getByLabelText, 'PIN', '1111')
+    fillPin(getByLabelText, 'Confirm PIN', '1111')
 
     fireEvent.click(getByText('Create account'))
     expect(await findByText(/already registered/i)).toBeTruthy()

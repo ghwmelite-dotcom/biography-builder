@@ -62,7 +62,7 @@ describe('PhonePinLoginDialog', () => {
       <PhonePinLoginDialog open={true} onOpenChange={onOpenChange} onSuccess={onSuccess} />,
     )
     fireEvent.change(getByLabelText('Phone number'), { target: { value: '241234567' } })
-    fillPin(getByLabelText, 'PIN', '111111')
+    fillPin(getByLabelText, 'PIN', '1111')
     fireEvent.click(getByText('Sign in'))
 
     await waitFor(() => expect(phonePinApi.login).toHaveBeenCalled())
@@ -79,7 +79,7 @@ describe('PhonePinLoginDialog', () => {
       <PhonePinLoginDialog open={true} onOpenChange={() => {}} />,
     )
     fireEvent.change(getByLabelText('Phone number'), { target: { value: '241234567' } })
-    fillPin(getByLabelText, 'PIN', '111111')
+    fillPin(getByLabelText, 'PIN', '1111')
     fireEvent.click(getByText('Sign in'))
     expect(await findByText('Wrong phone or PIN.')).toBeTruthy()
   })
@@ -93,7 +93,7 @@ describe('PhonePinLoginDialog', () => {
       <PhonePinLoginDialog open={true} onOpenChange={() => {}} />,
     )
     fireEvent.change(getByLabelText('Phone number'), { target: { value: '241234567' } })
-    fillPin(getByLabelText, 'PIN', '111111')
+    fillPin(getByLabelText, 'PIN', '1111')
     fireEvent.click(getByText('Sign in'))
     expect(await findByText(/locked temporarily/i)).toBeTruthy()
     expect(await findByText(/Try again in about 30 minutes/i)).toBeTruthy()

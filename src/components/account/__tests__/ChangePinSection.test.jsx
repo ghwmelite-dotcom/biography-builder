@@ -34,9 +34,9 @@ describe('ChangePinSection', () => {
 
   it('errors when new PINs do not match', async () => {
     const { getByLabelText, getByText, findByText } = render(<ChangePinSection />)
-    fillPin(getByLabelText, 'Current PIN', '111111')
-    fillPin(getByLabelText, 'New PIN', '222222')
-    fillPin(getByLabelText, 'Confirm new PIN', '333333')
+    fillPin(getByLabelText, 'Current PIN', '1111')
+    fillPin(getByLabelText, 'New PIN', '2222')
+    fillPin(getByLabelText, 'Confirm new PIN', '3333')
     fireEvent.click(getByText('Save new PIN'))
     expect(await findByText('New PINs do not match')).toBeTruthy()
     expect(phonePinApi.changePin).not.toHaveBeenCalled()
@@ -44,9 +44,9 @@ describe('ChangePinSection', () => {
 
   it('errors when new PIN equals current PIN', async () => {
     const { getByLabelText, getByText, findByText } = render(<ChangePinSection />)
-    fillPin(getByLabelText, 'Current PIN', '111111')
-    fillPin(getByLabelText, 'New PIN', '111111')
-    fillPin(getByLabelText, 'Confirm new PIN', '111111')
+    fillPin(getByLabelText, 'Current PIN', '1111')
+    fillPin(getByLabelText, 'New PIN', '1111')
+    fillPin(getByLabelText, 'Confirm new PIN', '1111')
     fireEvent.click(getByText('Save new PIN'))
     expect(await findByText(/must differ/i)).toBeTruthy()
   })
@@ -54,14 +54,14 @@ describe('ChangePinSection', () => {
   it('calls api with current and new PINs on success', async () => {
     phonePinApi.changePin.mockResolvedValueOnce({ message: 'ok' })
     const { getByLabelText, getByText, findByText } = render(<ChangePinSection />)
-    fillPin(getByLabelText, 'Current PIN', '111111')
-    fillPin(getByLabelText, 'New PIN', '222222')
-    fillPin(getByLabelText, 'Confirm new PIN', '222222')
+    fillPin(getByLabelText, 'Current PIN', '1111')
+    fillPin(getByLabelText, 'New PIN', '2222')
+    fillPin(getByLabelText, 'Confirm new PIN', '2222')
     fireEvent.click(getByText('Save new PIN'))
     await waitFor(() =>
       expect(phonePinApi.changePin).toHaveBeenCalledWith({
-        current_pin: '111111',
-        new_pin: '222222',
+        current_pin: '1111',
+        new_pin: '2222',
       }),
     )
     expect(await findByText(/PIN updated/i)).toBeTruthy()
@@ -72,9 +72,9 @@ describe('ChangePinSection', () => {
     err.status = 401
     phonePinApi.changePin.mockRejectedValueOnce(err)
     const { getByLabelText, getByText, findByText } = render(<ChangePinSection />)
-    fillPin(getByLabelText, 'Current PIN', '111111')
-    fillPin(getByLabelText, 'New PIN', '222222')
-    fillPin(getByLabelText, 'Confirm new PIN', '222222')
+    fillPin(getByLabelText, 'Current PIN', '1111')
+    fillPin(getByLabelText, 'New PIN', '2222')
+    fillPin(getByLabelText, 'Confirm new PIN', '2222')
     fireEvent.click(getByText('Save new PIN'))
     expect(await findByText('Current PIN is incorrect.')).toBeTruthy()
   })

@@ -7,7 +7,7 @@ const JWT_SECRET = 'test-jwt-secret'
 const PHONE = '+233244111222'
 const EMAIL = 'akua@example.com'
 const NAME = 'Akua Mensah'
-const PIN = '123456'
+const PIN = '1234'
 const BASE = 'https://example.com'
 
 // ─── Mock DB tracker ─────────────────────────────────────────────────────────
@@ -288,7 +288,7 @@ describe('POST /auth/phone/login', () => {
   it('returns 401 on wrong PIN, increments pin_failed_attempts', async () => {
     const env = makeEnv({ users: [await userWithPin()] })
     const res = await worker.fetch(
-      jsonReq('/auth/phone/login', 'POST', { phone: PHONE, pin: '999999' }),
+      jsonReq('/auth/phone/login', 'POST', { phone: PHONE, pin: '9999' }),
       env
     )
     expect(res.status).toBe(401)
@@ -300,7 +300,7 @@ describe('POST /auth/phone/login', () => {
       users: [await userWithPin({ pin_failed_attempts: 4 })],
     })
     const res = await worker.fetch(
-      jsonReq('/auth/phone/login', 'POST', { phone: PHONE, pin: '999999' }),
+      jsonReq('/auth/phone/login', 'POST', { phone: PHONE, pin: '9999' }),
       env
     )
     expect(res.status).toBe(401)
@@ -444,7 +444,7 @@ describe('POST /auth/phone/reset', () => {
   it('resets PIN, invalidates refresh tokens, and emails the user', async () => {
     const { env, token } = await setupUserWithResetToken()
     const res = await worker.fetch(
-      jsonReq('/auth/phone/reset', 'POST', { token, new_pin: '654321' }),
+      jsonReq('/auth/phone/reset', 'POST', { token, new_pin: '4321' }),
       env
     )
     expect(res.status).toBe(200)
@@ -466,7 +466,7 @@ describe('POST /auth/phone/reset', () => {
   it('returns 401 with invalid token', async () => {
     const env = makeEnv()
     const res = await worker.fetch(
-      jsonReq('/auth/phone/reset', 'POST', { token: 'a'.repeat(64), new_pin: '654321' }),
+      jsonReq('/auth/phone/reset', 'POST', { token: 'a'.repeat(64), new_pin: '4321' }),
       env
     )
     expect(res.status).toBe(401)
@@ -475,7 +475,7 @@ describe('POST /auth/phone/reset', () => {
   it('rejects 400 on invalid new PIN format', async () => {
     const { env, token } = await setupUserWithResetToken()
     const res = await worker.fetch(
-      jsonReq('/auth/phone/reset', 'POST', { token, new_pin: 'abcdef' }),
+      jsonReq('/auth/phone/reset', 'POST', { token, new_pin: 'abcd' }),
       env
     )
     expect(res.status).toBe(400)
@@ -484,12 +484,12 @@ describe('POST /auth/phone/reset', () => {
   it('rejects replay (token already consumed)', async () => {
     const { env, token } = await setupUserWithResetToken()
     const ok = await worker.fetch(
-      jsonReq('/auth/phone/reset', 'POST', { token, new_pin: '654321' }),
+      jsonReq('/auth/phone/reset', 'POST', { token, new_pin: '4321' }),
       env
     )
     expect(ok.status).toBe(200)
     const replay = await worker.fetch(
-      jsonReq('/auth/phone/reset', 'POST', { token, new_pin: '111222' }),
+      jsonReq('/auth/phone/reset', 'POST', { token, new_pin: '1122' }),
       env
     )
     expect(replay.status).toBe(401)
@@ -573,7 +573,7 @@ describe('POST /auth/phone/change-pin', () => {
     const env = makeEnv({ users: [await userWithPin()] })
     const jwt = await makeAuthJwt('u1')
     const res = await worker.fetch(
-      jsonReq('/auth/phone/change-pin', 'POST', { current_pin: PIN, new_pin: '654321' }, {
+      jsonReq('/auth/phone/change-pin', 'POST', { current_pin: PIN, new_pin: '4321' }, {
         Authorization: `Bearer ${jwt}`,
       }),
       env
@@ -591,7 +591,7 @@ describe('POST /auth/phone/change-pin', () => {
     const env = makeEnv({ users: [await userWithPin()] })
     const jwt = await makeAuthJwt('u1')
     const res = await worker.fetch(
-      jsonReq('/auth/phone/change-pin', 'POST', { current_pin: '999999', new_pin: '654321' }, {
+      jsonReq('/auth/phone/change-pin', 'POST', { current_pin: '9999', new_pin: '4321' }, {
         Authorization: `Bearer ${jwt}`,
       }),
       env
@@ -602,7 +602,7 @@ describe('POST /auth/phone/change-pin', () => {
   it('returns 401 without Bearer auth', async () => {
     const env = makeEnv({ users: [await userWithPin()] })
     const res = await worker.fetch(
-      jsonReq('/auth/phone/change-pin', 'POST', { current_pin: PIN, new_pin: '654321' }),
+      jsonReq('/auth/phone/change-pin', 'POST', { current_pin: PIN, new_pin: '4321' }),
       env
     )
     expect(res.status).toBe(401)

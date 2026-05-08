@@ -2070,7 +2070,7 @@ async function handlePhoneSignup(request, env) {
 
   if (!PHONE_E164_REGEX.test(phone)) return error('Invalid phone number format', 400, request)
   if (!EMAIL_REGEX.test(email)) return error('Invalid email address', 400, request)
-  if (!isValidPinFormat(pin)) return error('PIN must be exactly 6 digits', 400, request)
+  if (!isValidPinFormat(pin)) return error('PIN must be exactly 4 digits', 400, request)
   if (!name || name.length > 100) return error('Name is required (1–100 characters)', 400, request)
 
   // Conflict checks. Both columns are nullable for legacy rows; only conflict
@@ -2261,7 +2261,7 @@ async function handlePhoneReset(request, env) {
   const token = body.token
   const newPin = body.new_pin
 
-  if (!isValidPinFormat(newPin)) return error('PIN must be exactly 6 digits', 400, request)
+  if (!isValidPinFormat(newPin)) return error('PIN must be exactly 4 digits', 400, request)
 
   const consumed = await consumeAuthEmailToken(env.DB, { token, purpose: 'pin_reset' })
   if (!consumed.ok) return error('Reset link is invalid or expired', 401, request)
@@ -2354,7 +2354,7 @@ async function handlePhoneChangePin(request, env, userId) {
   const currentPin = body.current_pin
   const newPin = body.new_pin
 
-  if (!isValidPinFormat(newPin)) return error('New PIN must be exactly 6 digits', 400, request)
+  if (!isValidPinFormat(newPin)) return error('New PIN must be exactly 4 digits', 400, request)
 
   const user = await env.DB.prepare(
     `SELECT id, email, name, pin_hash FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1`

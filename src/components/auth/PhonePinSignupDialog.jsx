@@ -4,7 +4,7 @@ import { PhoneInput } from './PhoneInput.jsx'
 import { PinInput } from './PinInput.jsx'
 import { phonePinApi } from '../../utils/phonePinApi.js'
 
-const PIN_LENGTH = 6
+const PIN_LENGTH = 4
 
 export function PhonePinSignupDialog({ open, onOpenChange, onSwitchToLogin }) {
   const [phone, setPhone] = useState('')
@@ -51,8 +51,8 @@ export function PhonePinSignupDialog({ open, onOpenChange, onSwitchToLogin }) {
       setError('PINs do not match')
       return
     }
-    if (!/^\d{6}$/.test(pin)) {
-      setError('PIN must be 6 digits')
+    if (!/^\d{4}$/.test(pin)) {
+      setError('PIN must be 4 digits')
       return
     }
     setLoading(true); setError(null)
@@ -85,7 +85,7 @@ export function PhonePinSignupDialog({ open, onOpenChange, onSwitchToLogin }) {
                 Create your account
               </Dialog.Title>
               <Dialog.Description className="text-muted-foreground text-sm mb-4">
-                Sign up with phone, email, and a 6-digit PIN.
+                Sign up with phone, email, and a 4-digit PIN.
               </Dialog.Description>
 
               <div className="space-y-3">
@@ -129,7 +129,7 @@ export function PhonePinSignupDialog({ open, onOpenChange, onSwitchToLogin }) {
                 </div>
 
                 <div>
-                  <span className="block text-sm text-foreground mb-1">Choose a 6-digit PIN</span>
+                  <span className="block text-sm text-foreground mb-1">Choose a 4-digit PIN</span>
                   <PinInput value={pin} onChange={updateField(setPin)} disabled={loading} ariaLabel="PIN" />
                 </div>
 
